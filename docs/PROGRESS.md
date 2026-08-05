@@ -18,6 +18,7 @@ lifecycle: active
 - [x] Mac Pro iOS 작업 handoff 작성 ([iOS handoff](handoff/ios-client-macpro-handoff.md))
 - [ ] 초기 사용자 흐름과 MVP 범위 확정
 - [x] 첫 슬라이스 기술 스택과 Windows 실행 환경 확정
+- [x] 성숙한 오픈소스 prior art를 바탕으로 협업 코어 설계 정리 ([설계 문서](specs/collaboration-core-design.md))
 - [ ] 사람과 에이전트가 함께 사용하는 첫 작업방 구현
 
 ## 첫 메시지 버티컬 슬라이스

@@ -2,6 +2,7 @@
 
 ### 2026-08-06
 
+- [docs] Mattermost·Zulip·Matrix·FluffyChat·Rocket.Chat의 검증된 패턴을 협업 코어 설계로 정리 — 현재 Socket.IO·PostgreSQL·R2 방향을 유지하고 미결정 기술과 후속 검증 항목을 분리
 - [test] 두 Windows 네이티브 앱 창의 수동 송수신 확인 — Alice와 Bob이 같은 채널에서 실시간 메시지를 주고받는 첫 슬라이스 인수 완료
 - [feat] 메시지 작성 단축키 추가 — Enter로 전송하고 Shift+Enter로 줄바꿈하는 데스크톱 채팅 입력 동작 제공
 - [fix] 재접속 복구 기준을 마지막 성공 순번으로 유지 — 누락 조회 실패 뒤 들어온 실시간 이벤트가 중간 메시지를 영구히 건너뛰지 않도록 수정
