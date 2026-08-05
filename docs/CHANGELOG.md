@@ -2,6 +2,8 @@
 
 ### 2026-08-06
 
+- [chore] 맥미니 비공개 스테이징용 실행 빌드와 LaunchAgent 설치 골격 추가 — 인증 전 loopback 바인딩을 강제하면서 macOS 자동 재시작을 검증할 기반 마련
+- [docs] 맥미니 PostgreSQL 준비, 저장소 밖 환경 파일, SSH 터널과 공개 전 안전 경계 문서화 — 실제 인증 전 외부 노출을 차단한 채 Windows 앱 관통 검증이 가능하도록 정리
 - [docs] Mattermost·Zulip·Matrix·FluffyChat·Rocket.Chat의 검증된 패턴을 협업 코어 설계로 정리 — 현재 Socket.IO·PostgreSQL·R2 방향을 유지하고 미결정 기술과 후속 검증 항목을 분리
 - [test] 두 Windows 네이티브 앱 창의 수동 송수신 확인 — Alice와 Bob이 같은 채널에서 실시간 메시지를 주고받는 첫 슬라이스 인수 완료
 - [feat] 메시지 작성 단축키 추가 — Enter로 전송하고 Shift+Enter로 줄바꿈하는 데스크톱 채팅 입력 동작 제공

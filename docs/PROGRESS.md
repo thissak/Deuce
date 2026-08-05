@@ -34,6 +34,18 @@ lifecycle: active
 현재 구현은 `alice`·`bob` 개발 fixture와 `general` 단일 채널만 제공한다. 실제 인증 전
 서버는 `127.0.0.1`에만 바인딩하며 공개 인터넷에 노출하지 않는다.
 
+## 맥미니 비공개 스테이징
+
+- [x] 실행용 JavaScript 빌드와 macOS LaunchAgent 설치 골격 작성
+- [x] loopback 전용 설치·SSH 터널 검증 절차 확정 ([ADR 003](adr/003-mac-mini-private-staging.md), [설치 방법](infrastructure/mac-mini-private-staging.md))
+- [ ] 맥미니 SSH 로그인 계정과 키 확인
+- [ ] 맥미니 Node.js·PostgreSQL 환경 준비와 DB 마이그레이션
+- [ ] LaunchAgent 실행과 비정상 종료 후 자동 복구 확인
+- [ ] 맥미니 로그인·서버 재시작 후 메시지 보존 확인
+
+이 단계는 인증 전 비공개 스테이징이며 공개 DNS, 포트포워딩과 외부 바인딩을 포함하지
+않는다. Windows 앱은 필요할 때 SSH 로컬 포트 포워딩으로만 연결한다.
+
 ## 제품 목표
 
 - 사용자 10명 이하의 골든랩 내부 도구로 바로 사용한다.
