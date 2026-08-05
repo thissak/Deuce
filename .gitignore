@@ -1,0 +1,8 @@
+*.log
+.env
+.env.*
+!.env.example
+
+apps/server/node_modules/
+apps/server/dist/
+apps/client/build/
