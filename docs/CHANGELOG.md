@@ -2,6 +2,7 @@
 
 ### 2026-08-06
 
+- [fix] macOS LaunchAgent 배열 인자 치환을 `PlistBuddy`로 변경하고 미치환 자리표시자 검증 추가 — `plutil`의 배열 삽입 동작으로 서버가 재시작 루프에 빠지는 문제 차단
 - [docs] 맥미니의 SSH·Tailscale·Cloudflare·공용 서비스와 Deuce 환경을 글로벌 인프라 인벤토리에 통합 — 기존 서비스 충돌 없이 설치 자동화를 이어갈 공통 근거 확정
 - [chore] 맥미니 비공개 스테이징용 실행 빌드와 LaunchAgent 설치 골격 추가 — 인증 전 loopback 바인딩을 강제하면서 macOS 자동 재시작을 검증할 기반 마련
 - [docs] 맥미니 PostgreSQL 준비, 저장소 밖 환경 파일, SSH 터널과 공개 전 안전 경계 문서화 — 실제 인증 전 외부 노출을 차단한 채 Windows 앱 관통 검증이 가능하도록 정리

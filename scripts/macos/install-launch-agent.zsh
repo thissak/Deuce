@@ -57,13 +57,19 @@ chmod 700 "$app_support_dir" "$logs_dir"
 chmod 600 "$env_file"
 
 cp "$template" "$plist_target"
-plutil -replace ProgramArguments.1 -string "$runner" "$plist_target"
-plutil -replace ProgramArguments.2 -string "$node_bin" "$plist_target"
-plutil -replace ProgramArguments.3 -string "$server_root" "$plist_target"
-plutil -replace ProgramArguments.4 -string "$env_file" "$plist_target"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $runner" "$plist_target"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $node_bin" "$plist_target"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $server_root" "$plist_target"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $env_file" "$plist_target"
 plutil -replace WorkingDirectory -string "$server_root" "$plist_target"
 plutil -replace StandardOutPath -string "$stdout_log" "$plist_target"
 plutil -replace StandardErrorPath -string "$stderr_log" "$plist_target"
+
+if grep -q "__DEUCE_" "$plist_target"; then
+  print -u2 "The generated LaunchAgent plist still contains template placeholders"
+  exit 78
+fi
+
 plutil -lint "$plist_target"
 
 label="com.goldenlab.deuce-server"
