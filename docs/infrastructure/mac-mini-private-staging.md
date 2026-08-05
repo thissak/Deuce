@@ -43,6 +43,31 @@ CPU가 Apple Silicon인지 Intel인지에 따라 Homebrew 경로가 다르므로
 `/usr/local`을 문서에 고정하지 않는다. 설치 스크립트가 실행 시점의 절대 Node 경로를
 LaunchAgent plist에 기록한다.
 
+## 확인된 SSH 연결
+
+2026-08-06 기준 Windows 개발 PC에서 다음 연결을 확인했다.
+맥미니의 다른 프로젝트, 현재 리스너와 Cloudflare ingress를 포함한 공용 인벤토리
+SSOT는 `C:\Users\qart\.claude\reference\infrastructure.md`다. 이 문서는 Deuce 전용
+설치와 검증 절차만 소유한다.
+
+| 항목 | 확인값 |
+|---|---|
+| Tailscale 장치 | `ai-macmini` (`100.82.164.112`) |
+| macOS 계정 | `afred` |
+| 인증 방식 | Ed25519 공개키 |
+| Windows 키 경로 | `C:\Users\qart\.ssh\id_ed25519` |
+| 공개키 지문 | `SHA256:rnMtNJdPQjKDlTsA6tbHLdA7f/IH5m8CFT7uJPJCFi0` |
+
+비대화형 연결은 다음 명령으로 성공했다.
+
+```powershell
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes `
+  afred@100.82.164.112 'exit 0'
+```
+
+맥미니가 이미 이 공개키를 수락하므로 새 키를 만들거나 `authorized_keys`를 다시 수정할
+필요가 없다. 문서에는 공개키 지문만 기록하며 비밀키 내용과 암호는 저장하지 않는다.
+
 ## PostgreSQL 준비
 
 Homebrew를 사용하는 경우 프로젝트의 검증 버전과 호환되는 PostgreSQL을 설치하고
@@ -147,10 +172,10 @@ tail -n 100 "$HOME/Library/Logs/Deuce/server.stderr.log"
 
 ## Windows 앱 SSH 터널 검증
 
-Windows에서 맥미니 SSH 사용자명을 넣어 로컬 포트 포워딩을 연다.
+Windows에서 확인된 맥미니 계정과 Tailscale 주소로 로컬 포트 포워딩을 연다.
 
 ```powershell
-ssh -N -L 3210:127.0.0.1:3210 <mac-user>@ai-macmini
+ssh -N -L 3210:127.0.0.1:3210 afred@100.82.164.112
 ```
 
 터널을 유지한 채 Windows 앱의 `DEUCE_SERVER_URL`은 기존과 똑같이

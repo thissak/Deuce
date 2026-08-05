@@ -2,6 +2,7 @@
 
 ### 2026-08-06
 
+- [docs] 맥미니의 SSH·Tailscale·Cloudflare·공용 서비스와 Deuce 환경을 글로벌 인프라 인벤토리에 통합 — 기존 서비스 충돌 없이 설치 자동화를 이어갈 공통 근거 확정
 - [chore] 맥미니 비공개 스테이징용 실행 빌드와 LaunchAgent 설치 골격 추가 — 인증 전 loopback 바인딩을 강제하면서 macOS 자동 재시작을 검증할 기반 마련
 - [docs] 맥미니 PostgreSQL 준비, 저장소 밖 환경 파일, SSH 터널과 공개 전 안전 경계 문서화 — 실제 인증 전 외부 노출을 차단한 채 Windows 앱 관통 검증이 가능하도록 정리
 - [docs] Mattermost·Zulip·Matrix·FluffyChat·Rocket.Chat의 검증된 패턴을 협업 코어 설계로 정리 — 현재 Socket.IO·PostgreSQL·R2 방향을 유지하고 미결정 기술과 후속 검증 항목을 분리

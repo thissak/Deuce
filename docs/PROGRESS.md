@@ -38,7 +38,7 @@ lifecycle: active
 
 - [x] 실행용 JavaScript 빌드와 macOS LaunchAgent 설치 골격 작성
 - [x] loopback 전용 설치·SSH 터널 검증 절차 확정 ([ADR 003](adr/003-mac-mini-private-staging.md), [설치 방법](infrastructure/mac-mini-private-staging.md))
-- [ ] 맥미니 SSH 로그인 계정과 키 확인
+- [x] 맥미니 SSH 로그인 계정과 공개키 인증 확인
 - [ ] 맥미니 Node.js·PostgreSQL 환경 준비와 DB 마이그레이션
 - [ ] LaunchAgent 실행과 비정상 종료 후 자동 복구 확인
 - [ ] 맥미니 로그인·서버 재시작 후 메시지 보존 확인
