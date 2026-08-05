@@ -79,11 +79,11 @@ Windows 클라이언트 A
 | Flutter 분석과 단위·화면 테스트 | 통과 |
 | 실제 Flutter 컨트롤러 2개의 송수신과 재접속 복구 | 통과 |
 | Windows 릴리스 빌드 | 통과 |
-| 두 개의 가시적인 네이티브 앱 창 수동 인수 확인 | 미실시 |
+| 두 개의 가시적인 네이티브 앱 창 수동 인수 확인 | 통과 |
 
 반복 가능한 명령은 [첫 메시지 로컬 실행](../development/local-first-slice.md)에 둔다.
 
 ## 다음 슬라이스
 
-Windows 두 창의 수동 인수 확인 후 Android 연결과 Mac Pro iOS handoff를 진행한다. 세 플랫폼에서
+Android 연결과 Mac Pro iOS handoff를 진행한다. 세 플랫폼에서
 같은 메시지 계약이 확인된 뒤 실제 인증과 R2 파일 공유를 추가한다.

@@ -26,7 +26,7 @@ lifecycle: active
 - [x] TypeScript 서버와 PostgreSQL 메시지 저장
 - [x] Flutter 클라이언트 2개의 실시간 메시지 자동 관통 검증
 - [x] 연결 종료와 서버 재시작 후 누락 메시지 자동 복구 검증
-- [ ] 두 Windows 네이티브 앱 창의 수동 인수 확인 ([실행 방법](development/local-first-slice.md))
+- [x] 두 Windows 네이티브 앱 창의 수동 인수 확인 ([실행 방법](development/local-first-slice.md))
 - [ ] Android 클라이언트 연결 (Windows 슬라이스 이후)
 - [ ] iPhone 클라이언트 연결 (Mac Pro handoff 작업)
 

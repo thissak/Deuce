@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'chat_controller.dart';
 import 'message.dart';
@@ -219,20 +220,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _composer,
-                          enabled:
-                              controller.status == ConnectionStatus.connected,
-                          minLines: 1,
-                          maxLines: 5,
-                          onSubmitted: (_) => _send(),
-                          decoration: InputDecoration(
-                            hintText: '# general에 메시지 보내기',
-                            filled: true,
-                            fillColor: const Color(0xff333333),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
+                        child: CallbackShortcuts(
+                          bindings: {
+                            const SingleActivator(
+                              LogicalKeyboardKey.enter,
+                              includeRepeats: false,
+                            ): _send,
+                            const SingleActivator(
+                              LogicalKeyboardKey.numpadEnter,
+                              includeRepeats: false,
+                            ): _send,
+                          },
+                          child: TextField(
+                            controller: _composer,
+                            enabled:
+                                controller.status == ConnectionStatus.connected,
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            minLines: 1,
+                            maxLines: 5,
+                            decoration: InputDecoration(
+                              hintText: '# general에 메시지 보내기',
+                              filled: true,
+                              fillColor: const Color(0xff333333),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
