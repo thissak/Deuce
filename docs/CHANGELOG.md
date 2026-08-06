@@ -2,6 +2,9 @@
 
 ### 2026-08-07
 
+- [test] Windows Keycloak과 맥미니 인증 서버를 SSH 로컬·리버스 터널로 연결해 로그인·60초 token 갱신·메시지 저장·로그아웃 관통 검증 — 맥미니 세션 폐기와 Keycloak 활성 세션 0건 확인
+- [chore] 맥미니에 커밋 `8dde4f2` 분리 릴리스, 마이그레이션 전 DB 백업과 Alice·Bob 권한 연결 적용 — 기존 인증 전 LaunchAgent를 유지한 채 가역적으로 검증
+- [test] 같은 앱에서 Windows DB와 맥미니 DB를 전환하면 기존 메시지와 복구 순번이 남아 순서가 섞이는 현상 확인 — 서버별 저장 순서는 정상이며 클라이언트 상태 초기화 후속 필요
 - [test] Keycloak 26.7 loopback realm에서 Windows 로그인·60초 token 갱신·Socket 재연결·메시지 저장·로그아웃 관통 검증 — Deuce 세션 폐기와 Keycloak 활성 세션 0건 확인
 - [chore] 저장소 밖 DPAPI 비밀번호를 쓰는 로컬 Keycloak realm과 시작·종료 스크립트 추가 — 공개 DNS나 외부 바인딩 없이 실제 OIDC 개발 반복 가능
 - [docs] 실제 Keycloak 로컬 실행 절차와 검증 결과 반영 — 인증 슬라이스의 미검증 상태를 완료로 전환하고 공개 인프라 경계 유지

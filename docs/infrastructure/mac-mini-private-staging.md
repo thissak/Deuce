@@ -5,12 +5,12 @@
 이 문서는 Deuce 서버의 macOS 실행, PostgreSQL 보존, 프로세스 자동 재시작과 SSH 터널
 연결을 검증한 비공개 스테이징 절차다. 실제 운영 배포나 공개 인터넷 노출 절차가 아니다.
 
-2026-08-06 맥미니에 설치한 커밋 `05e8c07`은 `alice`·`bob` 개발 fixture를 사용하는
-이전 스냅샷이다. 현재 저장소에는 Keycloak OIDC 인증이 구현됐지만 실제 realm 관통 전이라
-맥미니에는 아직 업데이트하지 않았다. 두 버전 모두 HTTP와 Socket.IO를 반드시
-`127.0.0.1`에만 바인딩한다. Windows 검증은 Tailscale 위의 SSH 로컬 포트 포워딩을
-사용하며 공유기 포트포워딩, 공개 DNS, Cloudflare Tunnel과 외부 바인딩은 별도 승인과
-공개 전 검증이 끝날 때까지 금지한다.
+2026-08-06 설치한 기본 LaunchAgent는 `alice`·`bob` 개발 fixture를 사용하는 커밋
+`05e8c07`이다. 2026-08-07 인증 커밋 `8dde4f2`는 별도 릴리스와 임시 프로세스로 실제
+Keycloak 관통을 검증했지만 기본 LaunchAgent로 승격하지 않았다. 두 버전 모두 HTTP와
+Socket.IO를 `127.0.0.1`에만 바인딩한다. Windows 검증은 Tailscale 위의 SSH 포트
+포워딩만 사용하며 공유기 포트포워딩, 공개 DNS, Cloudflare Tunnel과 외부 바인딩은 별도
+승인과 공개 전 검증이 끝날 때까지 금지한다.
 
 ## 설치 구조
 
@@ -92,6 +92,39 @@ Windows SSH 로컬 포워딩에서도 health와 두 메시지를 조회했다. �
 Gitea, GitHub Actions runner와 공개 원본 여섯 곳은 설치 후에도 정상 동작했다.
 
 맥미니 자체 로그아웃·로그인 또는 재부팅 검증은 아직 수행하지 않았다.
+
+## 2026-08-07 인증 버전 임시 관통 결과
+
+기존 LaunchAgent를 중지하지 않고 인증 커밋을 분리된 경로에 설치해 임시 포트로
+검증했다. Windows Keycloak을 맥미니가 직접 설치한 것으로 오인하지 않도록 실제 경로를
+다음과 같이 구분한다.
+
+```text
+Windows 앱 ── 127.0.0.1:3210 ── SSH local forward ── 맥미니 127.0.0.1:33210
+     │                                                       │
+     └─ Windows Keycloak 127.0.0.1:8080                      └─ PostgreSQL
+                 ▲
+                 └─ SSH reverse forward ── 맥미니 127.0.0.1:18080 (JWKS 전용)
+```
+
+| 항목 | 확인값 |
+|---|---|
+| 검증 커밋 | `8dde4f2` |
+| 분리 릴리스 | `/Users/afred/Projects/Deuce-auth-test-8dde4f2` |
+| 마이그레이션 전 백업 | `~/Library/Application Support/Deuce/backups/pre-auth-8dde4f2.dump`, 권한 `600` |
+| 임시 인증 서버 | `127.0.0.1:33210` |
+| JWKS 리버스 터널 | 맥미니 `127.0.0.1:18080` → Windows `127.0.0.1:8080` |
+| 기존 서비스 | 커밋 `05e8c07`, `127.0.0.1:3210`, 변경 없음 |
+
+실제 Windows 시스템 브라우저 로그인과 `/me` `200`, 맥미니 PostgreSQL 메시지 3건,
+60초 access token 만료 뒤 두 차례 갱신·Socket 재연결, `/auth/logout` `204`, 맥미니
+세션 폐기 1건과 Keycloak 활성 세션 0건을 확인했다. 테스트 뒤 임시 `33210` 프로세스와
+SSH 터널을 종료하고 Windows 로컬 서버를 복구했다. 분리 릴리스와 DB 백업은 다음 승격
+검토를 위해 보존한다.
+
+같은 앱 프로세스에서 Windows 로컬 DB와 맥미니 DB를 바꾸면 기존 메시지와 마지막 복구
+순번이 메모리에 남아 서로 다른 DB의 같은 sequence가 섞여 보인다. 서버의 저장 순서는
+정상이며, 클라이언트 상태 초기화를 구현하기 전에는 서버 전환 시 앱을 재시작한다.
 
 ## PostgreSQL 준비
 
@@ -250,8 +283,8 @@ rm "$HOME/Library/LaunchAgents/com.goldenlab.deuce-server.plist"
 
 ## 인증 코드 배포와 공개 전 남은 조건
 
-- 실제 Keycloak realm 설치와 Windows 시스템 브라우저 로그인 관통 검증
-- Keycloak 사용자 `sub`와 Deuce 사용자·`general` 멤버십 연결
+- 인증 버전을 기본 LaunchAgent와 저장소 밖 OIDC 환경 파일로 승격
+- 운영 Keycloak 설치 위치와 맥미니가 지속적으로 접근할 JWKS 경로 확정
 - 운영 issuer·audience·JWKS와 back-channel logout 등록 검증
 - PostgreSQL 자동 백업과 복원 연습
 - HTTPS 진입점, 인증서와 공개 네트워크 방식 결정
