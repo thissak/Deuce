@@ -36,7 +36,8 @@ LaunchAgent는 로그인한 맥미니 사용자 세션에서 서버를 시작하
 - 맥미니의 macOS 계정으로 공개키 SSH 로그인이 가능해야 한다.
 - Tailscale 장치 이름 `ai-macmini`에 도달할 수 있어야 한다.
 - 맥미니에 Git, 프로젝트가 지원하는 Node.js, npm과 PostgreSQL이 설치되어 있어야 한다.
-- 비공개 GitHub 저장소를 clone 또는 pull할 권한이 있어야 한다.
+- 비공개 GitHub 저장소를 clone 또는 pull하거나, 감독님이 승인한 커밋의 검증된 Git
+  아카이브를 전송할 수 있어야 한다.
 - 맥미니에 그래픽 로그인 세션이 유지되어 `gui/<uid>` LaunchAgent 도메인이 존재해야 한다.
 
 CPU가 Apple Silicon인지 Intel인지에 따라 Homebrew 경로가 다르므로 `/opt/homebrew`나
@@ -68,13 +69,36 @@ ssh -o BatchMode=yes -o StrictHostKeyChecking=yes `
 맥미니가 이미 이 공개키를 수락하므로 새 키를 만들거나 `authorized_keys`를 다시 수정할
 필요가 없다. 문서에는 공개키 지문만 기록하며 비밀키 내용과 암호는 저장하지 않는다.
 
+## 2026-08-06 설치 결과
+
+| 항목 | 확인값 |
+|---|---|
+| 배포 소스 | 커밋 `05e8c07`, Windows에서 SHA-256을 확인한 Git 아카이브와 후속 수정 파일 전송 |
+| 서버 경로 | `/Users/afred/Projects/Deuce` |
+| Deuce Node | keg-only Node 24.19.0, `/opt/homebrew/opt/node@24/bin/node` |
+| PostgreSQL | 17.10, Homebrew LaunchAgent, `127.0.0.1`·`::1` 전용 |
+| DB | `deuce`, 소유 역할 `deuce_app`, TCP SCRAM-SHA-256 |
+| 환경 파일 | `/Users/afred/Library/Application Support/Deuce/server.env`, 권한 `600` |
+| 서버 서비스 | `com.goldenlab.deuce-server`, `127.0.0.1:3210` |
+
+맥미니에는 비공개 GitHub 저장소를 읽을 비대화형 자격증명이 없어 새 토큰을 만들지 않고
+커밋 스냅샷을 전송했다. 의존성 설치와 타입 검사·실행 빌드, Drizzle 마이그레이션,
+health 응답을 Node 24에서 확인했다.
+
+LaunchAgent가 관리하는 Node 프로세스를 `SIGKILL`했을 때 PID가 바뀌며 자동 복구됐다.
+재시작 전 테스트 메시지 순번 `1`이 유지됐고 재시작 후 메시지가 순번 `2`로 이어졌다.
+Windows SSH 로컬 포워딩에서도 health와 두 메시지를 조회했다. 기존 Caddy, cloudflared,
+Gitea, GitHub Actions runner와 공개 원본 여섯 곳은 설치 후에도 정상 동작했다.
+
+맥미니 자체 로그아웃·로그인 또는 재부팅 검증은 아직 수행하지 않았다.
+
 ## PostgreSQL 준비
 
 Homebrew를 사용하는 경우 프로젝트의 검증 버전과 호환되는 PostgreSQL을 설치하고
 서비스로 시작한다. 아래 예시는 PostgreSQL 17을 유지할 때의 명령이다.
 
 ```zsh
-brew install node postgresql@17
+brew install node@24 postgresql@17
 brew services start postgresql@17
 
 postgres_bin="$(brew --prefix postgresql@17)/bin"
@@ -84,6 +108,11 @@ postgres_bin="$(brew --prefix postgresql@17)/bin"
 
 비밀번호는 저장소, 셸 기록과 문서에 입력하지 않는다. PostgreSQL URL에 예약 문자가
 있는 비밀번호를 사용할 때는 URL 인코딩한다.
+
+Homebrew가 새로 만든 클러스터의 TCP 규칙이 `trust`라면 그대로 사용하지 않는다.
+로컬 관리용 Unix socket은 `trust`로 유지할 수 있지만 `127.0.0.1/32`와 `::1/128`의
+host·replication 규칙은 `scram-sha-256`으로 제한하고 틀린 비밀번호가 거부되는지
+확인한다.
 
 ## 서버 환경 파일
 
@@ -119,12 +148,14 @@ PORT=3210
 저장소 루트에서 다음을 실행한다.
 
 ```zsh
+export PATH="$(brew --prefix node@24)/bin:$PATH"
 cd apps/server
 npm ci
 npm run build
 
 deuce_env="$HOME/Library/Application Support/Deuce/server.env"
-node --env-file="$deuce_env" node_modules/drizzle-kit/bin.cjs migrate
+deuce_node="$(brew --prefix node@24)/bin/node"
+"$deuce_node" --env-file="$deuce_env" node_modules/drizzle-kit/bin.cjs migrate
 cd ../..
 ```
 
@@ -136,7 +167,7 @@ cd ../..
 
 ```zsh
 deuce_env="$HOME/Library/Application Support/Deuce/server.env"
-DEUCE_NODE_BIN="$(command -v node)" \
+DEUCE_NODE_BIN="$(brew --prefix node@24)/bin/node" \
   /bin/zsh scripts/macos/install-launch-agent.zsh "$deuce_env"
 ```
 
@@ -188,11 +219,13 @@ ssh -N -L 3210:127.0.0.1:3210 afred@100.82.164.112
 LaunchAgent를 다시 시작한다.
 
 ```zsh
+export PATH="$(brew --prefix node@24)/bin:$PATH"
 cd apps/server
 npm ci
 npm run build
 deuce_env="$HOME/Library/Application Support/Deuce/server.env"
-node --env-file="$deuce_env" node_modules/drizzle-kit/bin.cjs migrate
+deuce_node="$(brew --prefix node@24)/bin/node"
+"$deuce_node" --env-file="$deuce_env" node_modules/drizzle-kit/bin.cjs migrate
 
 service="gui/$(id -u)/com.goldenlab.deuce-server"
 launchctl kickstart -k "$service"

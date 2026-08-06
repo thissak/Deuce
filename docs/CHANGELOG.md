@@ -2,6 +2,8 @@
 
 ### 2026-08-06
 
+- [test] 맥미니 Node 프로세스 `SIGKILL` 후 LaunchAgent 새 PID 복구, 메시지 순번 1→2 보존과 Windows SSH 터널 관통 확인 — 기존 Caddy·Cloudflare·Gitea·runner 회귀 없이 비공개 스테이징 검증
+- [chore] 맥미니에 keg-only Node 24와 PostgreSQL 17, SCRAM TCP 인증, `deuce_app` DB와 loopback LaunchAgent 설치 — 기존 Node 25와 공용 서비스를 유지한 채 Deuce 서버 상시 실행
 - [fix] macOS LaunchAgent 배열 인자 치환을 `PlistBuddy`로 변경하고 미치환 자리표시자 검증 추가 — `plutil`의 배열 삽입 동작으로 서버가 재시작 루프에 빠지는 문제 차단
 - [docs] 맥미니의 SSH·Tailscale·Cloudflare·공용 서비스와 Deuce 환경을 글로벌 인프라 인벤토리에 통합 — 기존 서비스 충돌 없이 설치 자동화를 이어갈 공통 근거 확정
 - [chore] 맥미니 비공개 스테이징용 실행 빌드와 LaunchAgent 설치 골격 추가 — 인증 전 loopback 바인딩을 강제하면서 macOS 자동 재시작을 검증할 기반 마련
