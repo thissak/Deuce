@@ -6,9 +6,10 @@ Windows Flutter 앱이 시스템 브라우저로 Keycloak에 로그인하고 같
 Deuce의 HTTP와 Socket.IO를 사용한다. 서버는 OIDC 신원을 Deuce 내부 사용자에 연결하고
 `general` 멤버십을 요청마다 확인한다.
 
-코드와 로컬 서명 token 기반 통합 테스트는 완료됐지만 실제 Keycloak realm 설치와
-로그인은 아직 수행하지 않았다. 그 전까지 서버는 `127.0.0.1`에서만 실행하며 맥미니의
-기존 비공개 스테이징을 이 코드로 업데이트하지 않는다.
+코드와 로컬 서명 token 기반 통합 테스트에 더해 Keycloak 26.7 loopback realm에서 실제
+Windows 로그인, access token 갱신, Socket 재연결과 로그아웃을 관통 검증했다. 공개
+인프라는 아직 연결하지 않았으며 서버는 `127.0.0.1`에서만 실행한다. 맥미니의 기존
+비공개 스테이징도 아직 이 인증 코드로 업데이트하지 않았다.
 
 ## 개발 환경
 
@@ -20,12 +21,41 @@ Deuce의 HTTP와 Socket.IO를 사용한다. 서버는 OIDC 신원을 Deuce 내�
 | 서버 런타임 | Node.js 24 |
 | 데이터베이스 | PostgreSQL 17, `deuce_dev` |
 | 자동 통합 테스트 | PostgreSQL `deuce_test` |
+| 로컬 인증 서버 | Keycloak 26.7.0, Microsoft OpenJDK 25 |
 | OIDC 클라이언트 | `oidc` 4.0.0, `oidc_default_store` 1.1.2 |
 
 데이터베이스 접속 문자열은 저장소에 기록하지 않는다. Windows 사용자 환경 변수
 `DEUCE_DATABASE_URL`과 `DEUCE_TEST_DATABASE_URL`에 개발 DB와 테스트 DB 접속 문자열이
 설정되어 있다. OIDC issuer와 audience는 비밀번호가 아니지만 인증 경계를 바꾸므로
 실제 realm을 만들 때 배포 환경 값으로 관리한다.
+
+## 실제 Keycloak loopback 실행
+
+로컬 realm, `deuce-windows` public client와 `alice`·`bob` 사용자는 다음 스크립트로
+준비한다. Keycloak 배포본은 `C:\Tools\keycloak-26.7.0`, Microsoft OpenJDK 25는 기본
+설치 위치에 있어야 한다.
+
+```powershell
+cd D:\Projects\Deuce
+.\scripts\keycloak\start-local-keycloak.ps1
+.\scripts\keycloak\start-local-deuce-server.ps1
+.\scripts\keycloak\start-local-windows-client.ps1
+```
+
+사용자 비밀번호는 저장소에 넣지 않고 현재 Windows 사용자만 복호화할 수 있는 DPAPI
+파일로 `%LOCALAPPDATA%\Deuce\keycloak`에 둔다. 로그인할 비밀번호는 평문 출력 없이
+클립보드로 복사한다.
+
+```powershell
+.\scripts\keycloak\copy-local-user-password.ps1 -User alice
+```
+
+종료할 때는 앱을 닫은 뒤 Deuce 서버와 Keycloak을 순서대로 중지한다.
+
+```powershell
+.\scripts\keycloak\stop-local-deuce-server.ps1
+.\scripts\keycloak\stop-local-keycloak.ps1
+```
 
 ## 서버 설정과 실행
 
@@ -124,9 +154,9 @@ C:\Tools\flutter\bin\flutter.bat test
 C:\Tools\flutter\bin\flutter.bat build windows
 ```
 
-실제 Keycloak이 준비된 뒤 두 사용자의 짧은 access token을 현재 PowerShell 프로세스에만
-넣고 Flutter 컨트롤러 관통 테스트를 실행할 수 있다. token을 사용자 환경 변수로
-영구 저장하지 않는다. 스크립트는 임시 dart-define 파일을 종료 시 삭제한다.
+두 사용자의 짧은 access token을 현재 PowerShell 프로세스에만 넣고 Flutter 컨트롤러
+관통 테스트를 실행할 수도 있다. token을 사용자 환경 변수로 영구 저장하지 않는다.
+스크립트는 임시 dart-define 파일을 종료 시 삭제한다.
 
 ```powershell
 $env:DEUCE_LIVE_ACCESS_TOKEN_ALICE = '<short-lived-token>'
@@ -140,8 +170,8 @@ $env:DEUCE_LIVE_ACCESS_TOKEN_BOB = '<short-lived-token>'
 - access token은 Authorization header와 Socket.IO handshake `auth.accessToken`에서만
   받고 URL query, 메시지 payload와 로그에는 넣지 않는다.
 - refresh token과 access token은 `oidc_default_store`가 Windows 보안 저장소에 보관한다.
-- 실제 Keycloak 관통, 공개 HTTPS, 방화벽과 로그 검증 전에는 외부 바인딩, 공개 DNS,
-  포트포워딩과 Cloudflare Tunnel을 사용하지 않는다.
+- 실제 Keycloak loopback 관통은 완료했지만 공개 HTTPS와 방화벽 검증 전에는 외부
+  바인딩, 공개 DNS, 포트포워딩과 Cloudflare Tunnel을 사용하지 않는다.
 - Cloudflare의 현재 범위는 비공개 R2 원본 저장소이며 사용자 인증에 사용하지 않는다.
 - `drizzle-kit`의 개발 전용 하위 의존성에서 moderate 감사 항목 4개가 보고된다. 자동
   수정은 현재 버전을 구버전으로 내리므로 적용하지 않으며 마이그레이션 CLI를 외부에

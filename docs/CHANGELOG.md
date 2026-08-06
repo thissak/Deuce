@@ -2,6 +2,9 @@
 
 ### 2026-08-07
 
+- [test] Keycloak 26.7 loopback realm에서 Windows 로그인·60초 token 갱신·Socket 재연결·메시지 저장·로그아웃 관통 검증 — Deuce 세션 폐기와 Keycloak 활성 세션 0건 확인
+- [chore] 저장소 밖 DPAPI 비밀번호를 쓰는 로컬 Keycloak realm과 시작·종료 스크립트 추가 — 공개 DNS나 외부 바인딩 없이 실제 OIDC 개발 반복 가능
+- [docs] 실제 Keycloak 로컬 실행 절차와 검증 결과 반영 — 인증 슬라이스의 미검증 상태를 완료로 전환하고 공개 인프라 경계 유지
 - [test] OIDC 실패 경계와 세션 종료를 실제 PostgreSQL·Socket.IO로 검증하고 Flutter 분석·테스트·Windows 릴리스 빌드 통과 — 잘못된 issuer/audience·만료·비멤버·폐기 세션과 token 전달 회귀 차단
 - [feat] Windows Flutter 앱에 시스템 브라우저 Authorization Code + PKCE 로그인과 보안 token 저장 연결 — 개발 사용자 선택기를 제거하고 HTTP·Socket.IO가 갱신 가능한 동일 Bearer token 사용
 - [feat] 서버 OIDC 인증과 Deuce 권한 모델 구현 — 고정 issuer·audience·JWKS 검증, 내부 사용자·`general` 멤버십, 로컬/back-channel logout과 사용자 비활성화 시 기존 Socket 즉시 종료

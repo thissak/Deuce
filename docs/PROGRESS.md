@@ -44,11 +44,12 @@ lifecycle: active
 - [x] `general` 채널 멤버십 기반 조회·전송·구독 권한
 - [x] 로그아웃·back-channel logout·사용자 비활성화의 기존 Socket 즉시 종료
 - [x] token 비노출과 인증 실패 경로 자동 검증
-- [ ] 실제 Keycloak realm에서 Windows 로그인·token 갱신·로그아웃 관통 검증
+- [x] 실제 Keycloak realm에서 Windows 로그인·token 갱신·로그아웃 관통 검증
 
-인증 코드와 로컬 서명 token 기반 PostgreSQL·Socket.IO 테스트는 통과했다. 실제
-Keycloak 설치, 공개 DNS, HTTPS 진입점과 외부 바인딩은 별도 승인된 인프라 작업으로
-진행하며 그 관통 검증 전까지 기존 loopback·SSH 터널 경계를 유지한다.
+Keycloak 26.7 loopback realm에서 Windows 시스템 브라우저 로그인, 60초 access token
+만료 뒤 갱신·Socket 재연결, 메시지 저장과 로컬·Keycloak 로그아웃을 관통 검증했다.
+공개 DNS, HTTPS 진입점과 외부 바인딩은 별도 승인된 인프라 작업으로 진행하며 그전까지
+기존 loopback·SSH 터널 경계를 유지한다.
 
 ## 맥미니 비공개 스테이징
 

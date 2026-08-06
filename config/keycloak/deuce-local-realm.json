@@ -1,0 +1,78 @@
+{
+  "realm": "deuce",
+  "enabled": true,
+  "displayName": "Deuce Local Development",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 60,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "deuce-windows",
+      "name": "Deuce Windows",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "redirectUris": [
+        "http://127.0.0.1"
+      ],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://127.0.0.1",
+        "backchannel.logout.url": "http://127.0.0.1:3210/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "deuce-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "deuce-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "7ea9c83a-e8c8-4e9b-908b-a83aa9827b15",
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@deuce.local",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Test",
+      "requiredActions": []
+    },
+    {
+      "id": "564b34aa-4046-46c7-a84f-9cabf38e88c4",
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@deuce.local",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Test",
+      "requiredActions": []
+    }
+  ]
+}
