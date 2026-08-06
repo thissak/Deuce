@@ -1,10 +1,12 @@
 import { buildApp } from './app.js';
+import { AuthService } from './auth.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 
 const config = loadConfig();
 const { db, pool } = createDatabase(config.databaseUrl);
-const app = buildApp({ db, pool });
+const auth = new AuthService(db, config.oidc);
+const app = buildApp({ db, pool, auth });
 
 const stop = async () => {
   await app.close();

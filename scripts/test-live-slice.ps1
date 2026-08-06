@@ -17,12 +17,59 @@ if (-not $deuceDatabaseUrl) {
     throw 'DEUCE_TEST_DATABASE_URL is not configured.'
 }
 
+$deuceRequiredOidcVariables = @(
+    'DEUCE_OIDC_ISSUER',
+    'DEUCE_OIDC_AUDIENCE',
+    'DEUCE_OIDC_JWKS_URL',
+    'DEUCE_OIDC_LOGOUT_AUDIENCE'
+)
+$deuceOidcEnvironment = @{}
+foreach ($deuceVariableName in $deuceRequiredOidcVariables) {
+    $deuceValue = [Environment]::GetEnvironmentVariable(
+        $deuceVariableName,
+        'Process'
+    )
+    if (-not $deuceValue) {
+        $deuceValue = [Environment]::GetEnvironmentVariable(
+            $deuceVariableName,
+            'User'
+        )
+    }
+    if (-not $deuceValue) {
+        throw "$deuceVariableName is not configured."
+    }
+    $deuceOidcEnvironment[$deuceVariableName] = $deuceValue
+}
+
+$deuceAliceAccessToken = [Environment]::GetEnvironmentVariable(
+    'DEUCE_LIVE_ACCESS_TOKEN_ALICE',
+    'Process'
+)
+$deuceBobAccessToken = [Environment]::GetEnvironmentVariable(
+    'DEUCE_LIVE_ACCESS_TOKEN_BOB',
+    'Process'
+)
+if (-not $deuceAliceAccessToken -or -not $deuceBobAccessToken) {
+    throw 'Both DEUCE_LIVE_ACCESS_TOKEN_ALICE and DEUCE_LIVE_ACCESS_TOKEN_BOB are required.'
+}
+
 $deuceNode = (Get-Command node).Source
 $deuceTsx = Join-Path $deuceServerRoot 'node_modules\tsx\dist\cli.mjs'
 $deuceLogRoot = Join-Path $env:TEMP (
     'deuce-live-' + [Guid]::NewGuid().ToString('N')
 )
 New-Item -ItemType Directory -Path $deuceLogRoot | Out-Null
+$deuceDefinesFile = Join-Path $deuceLogRoot 'dart-defines.json'
+$deuceDartDefines = @{
+    DEUCE_LIVE_SERVER_URL = "http://127.0.0.1:$deucePort"
+    DEUCE_LIVE_ACCESS_TOKEN_ALICE = $deuceAliceAccessToken
+    DEUCE_LIVE_ACCESS_TOKEN_BOB = $deuceBobAccessToken
+} | ConvertTo-Json
+[System.IO.File]::WriteAllText(
+    $deuceDefinesFile,
+    $deuceDartDefines,
+    [System.Text.UTF8Encoding]::new($false)
+)
 
 $deucePreviousEnvironment = @{
     DEUCE_DATABASE_URL = [Environment]::GetEnvironmentVariable(
@@ -32,12 +79,23 @@ $deucePreviousEnvironment = @{
     HOST = [Environment]::GetEnvironmentVariable('HOST', 'Process')
     PORT = [Environment]::GetEnvironmentVariable('PORT', 'Process')
 }
+foreach ($deuceVariableName in $deuceRequiredOidcVariables) {
+    $deucePreviousEnvironment[$deuceVariableName] =
+        [Environment]::GetEnvironmentVariable($deuceVariableName, 'Process')
+}
 $deuceServer = $null
 
 try {
     $env:DEUCE_DATABASE_URL = $deuceDatabaseUrl
     $env:HOST = '127.0.0.1'
     $env:PORT = "$deucePort"
+    foreach ($deuceVariableName in $deuceRequiredOidcVariables) {
+        [Environment]::SetEnvironmentVariable(
+            $deuceVariableName,
+            $deuceOidcEnvironment[$deuceVariableName],
+            'Process'
+        )
+    }
 
     $deuceServer = Start-Process `
         -FilePath $deuceNode `
@@ -74,7 +132,7 @@ try {
     try {
         & 'C:\Tools\flutter\bin\flutter.bat' test `
             'test\live_chat_controller_test.dart' `
-            '--dart-define=DEUCE_LIVE_SERVER_URL=http://127.0.0.1:3211'
+            "--dart-define-from-file=$deuceDefinesFile"
         if ($LASTEXITCODE -ne 0) {
             throw 'Flutter live integration test failed.'
         }
@@ -99,5 +157,9 @@ finally {
             $deucePreviousEnvironment[$deuceVariableName],
             'Process'
         )
+    }
+
+    if (Test-Path -LiteralPath $deuceDefinesFile) {
+        Remove-Item -LiteralPath $deuceDefinesFile -Force
     }
 }

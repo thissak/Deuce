@@ -1,4 +1,5 @@
 import 'package:deuce_client/src/app.dart';
+import 'package:deuce_client/src/auth_controller.dart';
 import 'package:deuce_client/src/chat_controller.dart';
 import 'package:deuce_client/src/message.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ void main() {
       'sequence': 7,
       'channelId': 'general',
       'authorId': 'alice',
+      'authorDisplayName': 'Alice',
       'body': 'hello',
       'createdAt': '2026-08-06T00:00:00.000Z',
     });
@@ -23,11 +25,32 @@ void main() {
   });
 
   testWidgets('shows the first-slice channel shell', (tester) async {
-    await tester.pumpWidget(const DeuceApp(connectOnStart: false));
+    final controller = _ConnectedChatController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(home: ChatScreen(controller: controller)),
+    );
 
     expect(find.text('DEUCE'), findsOneWidget);
     expect(find.text('# general'), findsNWidgets(2));
     expect(find.text('첫 메시지를 보내 대화를 시작하세요.'), findsOneWidget);
+  });
+
+  testWidgets('requires an OIDC login before showing the channel', (
+    tester,
+  ) async {
+    final auth = _SignedOutAuthController();
+    final chat = ChatController();
+    addTearDown(auth.dispose);
+    addTearDown(chat.dispose);
+
+    await tester.pumpWidget(
+      DeuceApp(authController: auth, chatController: chat),
+    );
+    await tester.pump();
+
+    expect(find.text('Keycloak 계정으로 로그인'), findsOneWidget);
+    expect(find.text('# general'), findsNothing);
   });
 
   testWidgets('Enter sends while Shift+Enter remains available for a newline', (
@@ -73,4 +96,24 @@ class _ConnectedChatController extends ChatController {
     sentMessages.add(rawBody);
     return true;
   }
+}
+
+class _SignedOutAuthController extends AuthController {
+  @override
+  String? get errorMessage => null;
+
+  @override
+  AuthStatus get status => AuthStatus.signedOut;
+
+  @override
+  Future<String?> getAccessToken() async => null;
+
+  @override
+  Future<void> initialize() async => notifyListeners();
+
+  @override
+  Future<void> login() async {}
+
+  @override
+  Future<void> logout() async {}
 }

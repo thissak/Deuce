@@ -1,33 +1,79 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'auth_controller.dart';
 import 'chat_controller.dart';
 import 'message.dart';
 
 class DeuceApp extends StatefulWidget {
-  const DeuceApp({super.key, this.connectOnStart = true});
+  const DeuceApp({super.key, this.authController, this.chatController});
 
-  final bool connectOnStart;
+  final AuthController? authController;
+  final ChatController? chatController;
 
   @override
   State<DeuceApp> createState() => _DeuceAppState();
 }
 
 class _DeuceAppState extends State<DeuceApp> {
-  late final ChatController _controller;
+  late final AuthController _authController;
+  late final ChatController _chatController;
+  late final bool _ownsAuthController;
+  late final bool _ownsChatController;
+  bool _chatStarted = false;
+  bool _loggingOut = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = ChatController();
-    if (widget.connectOnStart) {
-      _controller.connect();
+    _ownsAuthController = widget.authController == null;
+    _ownsChatController = widget.chatController == null;
+    _authController = widget.authController ?? OidcAuthController();
+    _chatController =
+        widget.chatController ??
+        ChatController(accessTokenProvider: _authController.getAccessToken);
+    _authController.addListener(_onAuthChanged);
+    unawaited(_authController.initialize());
+  }
+
+  void _onAuthChanged() {
+    if (_authController.status == AuthStatus.signedIn && !_chatStarted) {
+      _chatStarted = true;
+      unawaited(_chatController.connect());
+    } else if ((_authController.status == AuthStatus.signedOut ||
+            _authController.status == AuthStatus.error) &&
+        _chatStarted) {
+      _chatStarted = false;
+      _chatController.disconnect();
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _logout() async {
+    setState(() => _loggingOut = true);
+    try {
+      try {
+        await _chatController.revokeCurrentSession();
+      } catch (_) {
+        // Local credentials still need to be removed if Deuce is unreachable.
+      }
+      try {
+        await _authController.logout();
+      } catch (_) {
+        // OidcAuthController forgets the local user even if remote logout fails.
+      }
+    } finally {
+      if (mounted) setState(() => _loggingOut = false);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _authController.removeListener(_onAuthChanged);
+    if (_ownsAuthController) _authController.dispose();
+    if (_ownsChatController) _chatController.dispose();
     super.dispose();
   }
 
@@ -45,15 +91,94 @@ class _DeuceAppState extends State<DeuceApp> {
         scaffoldBackgroundColor: const Color(0xff1f1f1f),
         useMaterial3: true,
       ),
-      home: ChatScreen(controller: _controller),
+      home: switch (_authController.status) {
+        AuthStatus.signedIn => ChatScreen(
+          controller: _chatController,
+          onLogout: _logout,
+          loggingOut: _loggingOut,
+        ),
+        AuthStatus.initializing => const _AuthScreen(busy: true),
+        AuthStatus.signingIn => const _AuthScreen(busy: true),
+        AuthStatus.signedOut => _AuthScreen(onLogin: _authController.login),
+        AuthStatus.error => _AuthScreen(
+          errorMessage: _authController.errorMessage,
+          onLogin: _authController.login,
+        ),
+      },
+    );
+  }
+}
+
+class _AuthScreen extends StatelessWidget {
+  const _AuthScreen({this.busy = false, this.errorMessage, this.onLogin});
+
+  final bool busy;
+  final String? errorMessage;
+  final Future<void> Function()? onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SizedBox(
+          width: 380,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'DEUCE',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '팀 대화와 프로젝트 자료를 한곳에서 공유하세요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white60),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xffe98282)),
+                    ),
+                  ],
+                  const SizedBox(height: 28),
+                  if (busy)
+                    const CircularProgressIndicator()
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: onLogin,
+                        icon: const Icon(Icons.login_rounded),
+                        label: const Text('Keycloak 계정으로 로그인'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.controller});
+  const ChatScreen({
+    super.key,
+    required this.controller,
+    this.onLogout,
+    this.loggingOut = false,
+  });
 
   final ChatController controller;
+  final Future<void> Function()? onLogout;
+  final bool loggingOut;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -104,6 +229,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
+    final displayName = controller.displayName.isEmpty
+        ? '로그인 사용자'
+        : controller.displayName;
 
     return Scaffold(
       body: Row(
@@ -135,23 +263,33 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: const Text('# general'),
                 ),
                 const Spacer(),
-                const Text('개발 사용자', style: TextStyle(color: Colors.white60)),
+                const Text('로그인 사용자', style: TextStyle(color: Colors.white60)),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: controller.userId,
-                  decoration: const InputDecoration(isDense: true),
-                  items: ChatController.userIds
-                      .map(
-                        (userId) => DropdownMenuItem(
-                          value: userId,
-                          child: Text(_displayName(userId)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (userId) {
-                    if (userId != null) controller.connect(userId);
-                  },
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xff6264a7),
+                      child: Text(_initial(displayName)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        displayName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
+                if (widget.onLogout != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: widget.loggingOut ? null : widget.onLogout,
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: Text(widget.loggingOut ? '로그아웃 중' : '로그아웃'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -296,7 +434,7 @@ class _MessageRow extends StatelessWidget {
             backgroundColor: mine
                 ? const Color(0xff6264a7)
                 : const Color(0xff4f6b57),
-            child: Text(_displayName(message.authorId).substring(0, 1)),
+            child: Text(_initial(message.authorDisplayName)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -306,7 +444,7 @@ class _MessageRow extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      _displayName(message.authorId),
+                      message.authorDisplayName,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(width: 8),
@@ -362,10 +500,7 @@ class _ConnectionBadge extends StatelessWidget {
   }
 }
 
-String _displayName(String userId) {
-  return switch (userId) {
-    'alice' => 'Alice',
-    'bob' => 'Bob',
-    _ => userId,
-  };
+String _initial(String displayName) {
+  final trimmed = displayName.trim();
+  return trimmed.isEmpty ? '?' : trimmed.substring(0, 1).toUpperCase();
 }

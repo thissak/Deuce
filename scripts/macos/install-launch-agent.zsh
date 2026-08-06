@@ -40,7 +40,7 @@ env_file="${env_file:A}"
 
 if ! HOST="127.0.0.1" NODE_ENV="production" \
   "$node_bin" --env-file="$env_file" \
-  -e 'if (!process.env.DEUCE_DATABASE_URL) process.exit(78)'; then
+  -e 'const required = ["DEUCE_DATABASE_URL", "DEUCE_OIDC_ISSUER", "DEUCE_OIDC_AUDIENCE", "DEUCE_OIDC_JWKS_URL", "DEUCE_OIDC_LOGOUT_AUDIENCE"]; if (required.some((name) => !process.env[name])) process.exit(78)'; then
   print -u2 "The Deuce server environment file is invalid"
   exit 78
 fi

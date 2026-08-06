@@ -31,8 +31,24 @@ lifecycle: active
 - [ ] Android 클라이언트 연결 (Windows 슬라이스 이후)
 - [ ] iPhone 클라이언트 연결 (Mac Pro handoff 작업)
 
-현재 구현은 `alice`·`bob` 개발 fixture와 `general` 단일 채널만 제공한다. 실제 인증 전
-서버는 `127.0.0.1`에만 바인딩하며 공개 인터넷에 노출하지 않는다.
+기존 메시지 저장·복구 경로는 실제 Deuce 사용자 UUID와 표시 이름을 사용하도록 인증
+슬라이스에 연결됐다. 채널은 아직 `general` 하나이며 서버는 계속 `127.0.0.1`에만
+바인딩한다.
+
+## 실제 인증과 `general` 권한
+
+- [x] Keycloak OIDC와 Deuce 권한 경계 확정 ([ADR 004](adr/004-keycloak-oidc-authentication.md))
+- [x] HTTP·Socket.IO·세션 폐기 공통 계약 확정 ([인증 계약 v1](contracts/auth-v1.md))
+- [x] Windows 시스템 브라우저 Authorization Code + PKCE 로그인 구현
+- [x] OIDC access token 검증과 Deuce 사용자 연결
+- [x] `general` 채널 멤버십 기반 조회·전송·구독 권한
+- [x] 로그아웃·back-channel logout·사용자 비활성화의 기존 Socket 즉시 종료
+- [x] token 비노출과 인증 실패 경로 자동 검증
+- [ ] 실제 Keycloak realm에서 Windows 로그인·token 갱신·로그아웃 관통 검증
+
+인증 코드와 로컬 서명 token 기반 PostgreSQL·Socket.IO 테스트는 통과했다. 실제
+Keycloak 설치, 공개 DNS, HTTPS 진입점과 외부 바인딩은 별도 승인된 인프라 작업으로
+진행하며 그 관통 검증 전까지 기존 loopback·SSH 터널 경계를 유지한다.
 
 ## 맥미니 비공개 스테이징
 
@@ -43,8 +59,9 @@ lifecycle: active
 - [x] LaunchAgent 실행, 비정상 종료 자동 복구와 메시지 순번 보존 확인
 - [ ] 맥미니 로그인·재부팅 후 LaunchAgent 자동 시작과 메시지 보존 확인
 
-이 단계는 인증 전 비공개 스테이징이며 공개 DNS, 포트포워딩과 외부 바인딩을 포함하지
-않는다. Windows 앱은 필요할 때 SSH 로컬 포트 포워딩으로만 연결한다.
+현재 맥미니에는 인증 전 커밋 `05e8c07`이 실행 중이며 새 인증 코드는 아직 배포하지
+않았다. 이 비공개 스테이징은 공개 DNS, 포트포워딩과 외부 바인딩을 포함하지 않고
+Windows 앱은 필요할 때 SSH 로컬 포트 포워딩으로만 연결한다.
 
 ## 제품 목표
 

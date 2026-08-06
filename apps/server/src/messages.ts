@@ -1,13 +1,10 @@
-import { and, asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from './db/client.js';
-import { messages, type MessageRow } from './db/schema.js';
+import { messages, users, type MessageRow } from './db/schema.js';
 
 export const channelId = 'general' as const;
-export const devUserIds = ['alice', 'bob'] as const;
-
-export const devUserSchema = z.enum(devUserIds);
 
 export const sendMessageSchema = z.object({
   clientMessageId: z.uuid(),
@@ -26,6 +23,7 @@ export type Message = {
   sequence: number;
   channelId: string;
   authorId: string;
+  authorDisplayName: string;
   body: string;
   createdAt: string;
 };
@@ -35,13 +33,14 @@ export type StoredMessage = {
   inserted: boolean;
 };
 
-export function toMessage(row: MessageRow): Message {
+export function toMessage(row: MessageRow, authorDisplayName: string): Message {
   return {
     id: row.id,
     clientMessageId: row.clientMessageId,
     sequence: row.sequence,
     channelId: row.channelId,
     authorId: row.authorId,
+    authorDisplayName,
     body: row.body,
     createdAt: row.createdAt.toISOString(),
   };
@@ -52,19 +51,23 @@ export async function listMessages(
   afterSequence: number,
 ): Promise<Message[]> {
   const rows = await db
-    .select()
+    .select({ message: messages, authorDisplayName: users.displayName })
     .from(messages)
+    .leftJoin(users, sql`${users.id}::text = ${messages.authorId}`)
     .where(
       and(eq(messages.channelId, channelId), gt(messages.sequence, afterSequence)),
     )
     .orderBy(asc(messages.sequence));
 
-  return rows.map(toMessage);
+  return rows.map((row) =>
+    toMessage(row.message, row.authorDisplayName ?? row.message.authorId),
+  );
 }
 
 export async function storeMessage(
   db: Database,
   authorId: string,
+  authorDisplayName: string,
   input: z.infer<typeof sendMessageSchema>,
 ): Promise<StoredMessage> {
   const [inserted] = await db
@@ -81,7 +84,10 @@ export async function storeMessage(
     .returning();
 
   if (inserted) {
-    return { message: toMessage(inserted), inserted: true };
+    return {
+      message: toMessage(inserted, authorDisplayName),
+      inserted: true,
+    };
   }
 
   const [existing] = await db
@@ -99,5 +105,8 @@ export async function storeMessage(
     throw new Error('Message conflict could not be resolved');
   }
 
-  return { message: toMessage(existing), inserted: false };
+  return {
+    message: toMessage(existing, authorDisplayName),
+    inserted: false,
+  };
 }

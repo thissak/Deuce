@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-08-07
+
+- [test] OIDC 실패 경계와 세션 종료를 실제 PostgreSQL·Socket.IO로 검증하고 Flutter 분석·테스트·Windows 릴리스 빌드 통과 — 잘못된 issuer/audience·만료·비멤버·폐기 세션과 token 전달 회귀 차단
+- [feat] Windows Flutter 앱에 시스템 브라우저 Authorization Code + PKCE 로그인과 보안 token 저장 연결 — 개발 사용자 선택기를 제거하고 HTTP·Socket.IO가 갱신 가능한 동일 Bearer token 사용
+- [feat] 서버 OIDC 인증과 Deuce 권한 모델 구현 — 고정 issuer·audience·JWKS 검증, 내부 사용자·`general` 멤버십, 로컬/back-channel logout과 사용자 비활성화 시 기존 Socket 즉시 종료
+- [chore] Windows 보안 token 저장 플러그인 빌드를 위해 Visual C++ ATL 구성요소 추가 — MSVC 14.44 도구셋으로 릴리스 실행 파일 생성 확인
+- [docs] 인증된 로컬 실행, Deuce 사용자 연결, 맥미니 미배포 경계와 메시지 계약 갱신 — 실제 Keycloak 관통 전 loopback 유지 조건 명시
+- [docs] Keycloak OIDC와 Deuce 권한 경계를 ADR 및 인증 계약으로 확정 — 네이티브 PKCE 로그인, HTTP·Socket.IO 공통 검증과 즉시 세션 폐기의 구현 기준 마련
+
 ### 2026-08-06
 
 - [test] 맥미니 Node 프로세스 `SIGKILL` 후 LaunchAgent 새 PID 복구, 메시지 순번 1→2 보존과 Windows SSH 터널 관통 확인 — 기존 Caddy·Cloudflare·Gitea·runner 회귀 없이 비공개 스테이징 검증

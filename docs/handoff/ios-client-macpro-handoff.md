@@ -12,6 +12,7 @@ iPhone으로 연결하고, 첫 메시지 버티컬 슬라이스가 동일하게 
   구분되어 있어야 한다.
 - 저장소에 Flutter 공통 클라이언트와 iOS Runner가 있어야 한다.
 - 메시지 HTTP API와 실시간 이벤트 계약이 문서 또는 계약 파일로 고정되어 있어야 한다.
+- 실제 Keycloak realm과 iOS 전용 OIDC public client를 만들 권한과 주소가 준비되어야 한다.
 - Mac Pro가 개발 서버에 도달할 수 있는 사설 개발 경로가 준비되어 있어야 한다.
 
 시작 조건이 충족되지 않았다면 임의의 iOS 전용 mock이나 별도 프로토콜을 만들지 말고
@@ -23,7 +24,9 @@ Windows 작업 결과를 기다린다.
 2. 저장소의 `CLAUDE.md`, `docs/PROGRESS.md`, `docs/CHANGELOG.md`를 순서대로 읽는다.
 3. [ADR 002](../adr/002-flutter-client-platform-split.md)와
    [첫 메시지 슬라이스](../specs/first-message-vertical-slice.md),
-   [메시지 계약 v1](../contracts/messages-v1.md)을 읽는다.
+   [메시지 계약 v1](../contracts/messages-v1.md),
+   [ADR 004](../adr/004-keycloak-oidc-authentication.md),
+   [인증 계약 v1](../contracts/auth-v1.md)을 읽는다.
 4. Git 상태를 확인하고 Windows 작업자의 변경을 보존한다.
 
 ## Mac Pro 준비
@@ -46,7 +49,9 @@ flutter analyze
 flutter test
 flutter build ios --simulator --debug
 flutter run -d <ios-simulator-id> \
-  --dart-define=DEUCE_SERVER_URL=http://<approved-private-server-address>:3210
+  --dart-define=DEUCE_SERVER_URL=http://<approved-private-server-address>:3210 \
+  --dart-define=DEUCE_OIDC_ISSUER=https://<approved-keycloak-issuer>/realms/deuce \
+  --dart-define=DEUCE_OIDC_CLIENT_ID=deuce-ios
 ```
 
 현재 서버 기본 바인딩은 Windows loopback이므로 Mac Pro에서 바로 접근할 수 없다.
@@ -57,15 +62,22 @@ flutter run -d <ios-simulator-id> \
 담당과 조율한다. 플랫폼 분기를 추가할 때는 iOS 런타임 차이에 필요한 최소 범위로
 제한한다.
 
+현재 `auth_controller.dart`의 redirect URI와 기본 client ID는 Windows 인증 슬라이스용
+`http://127.0.0.1:0`, `deuce-windows`다. iOS에서 이를 그대로 재사용하지 않는다. Mac Pro
+작업은 Keycloak에 별도 `deuce-ios` public client와 승인된 custom-scheme redirect URI를
+등록하고, 같은 OIDC·서버 권한 계약을 유지하면서 플랫폼 redirect 선택만 분리한다.
+client secret, access token과 refresh token을 소스·문서·일반 설정에 기록하지 않는다.
+
 ## 검증 시나리오
 
-1. iPhone Simulator 또는 승인된 실제 기기에서 앱을 실행한다.
-2. Windows 클라이언트와 동일한 개발 채널에 접속한다.
+1. iPhone Simulator 또는 승인된 실제 기기에서 시스템 브라우저 OIDC 로그인을 완료한다.
+2. `general` 멤버인 Deuce 사용자로 Windows 클라이언트와 동일한 채널에 접속한다.
 3. Windows에서 보낸 메시지가 iPhone에 즉시 나타나는지 확인한다.
 4. iPhone에서 보낸 메시지가 Windows에 즉시 나타나는지 확인한다.
 5. iPhone 네트워크를 끊은 동안 메시지를 만든 뒤 재연결하여 누락분이 복구되는지
    확인한다.
 6. 서버 재시작 후 기존 메시지가 유지되고 송수신이 계속되는지 확인한다.
+7. 로그아웃 후 기존 Socket이 끊기고 같은 token의 HTTP 요청이 거부되는지 확인한다.
 
 ## 완료 산출물
 
@@ -80,6 +92,5 @@ flutter run -d <ios-simulator-id> \
 
 - App Store 또는 TestFlight 배포
 - APNs 푸시 알림
-- 실제 사용자 인증
 - R2 파일 업로드와 영상 재생
 - Android 플랫폼 작업

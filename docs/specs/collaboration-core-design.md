@@ -35,8 +35,12 @@ TypeScript 서버 ── 저장 성공 후 방송 ── PostgreSQL
 - 클라이언트는 실시간 이벤트와 복구 조회 결과를 메시지 ID로 합치고 서버 순번으로
   정렬한다.
 - 복구 조회가 실패하면 마지막 성공 복구 순번을 전진시키지 않는다.
-- 현재 사용자는 `alice`·`bob` fixture이며 메시지와 복구 커서는 메모리에만 있다.
-- 실제 인증 전 서버는 loopback에만 바인딩하고 공개 인터넷에 노출하지 않는다.
+- Keycloak OIDC access token을 Deuce 내부 사용자에 연결하고 `general` 멤버십을 HTTP와
+  Socket.IO 명령마다 확인하는 인증 슬라이스를 구현했다.
+- 메시지는 PostgreSQL에 저장하고 클라이언트의 마지막 성공 복구 커서는 아직 메모리에만
+  유지한다.
+- 실제 Keycloak 관통과 공개 HTTPS 경계를 검증하기 전 서버는 loopback에만 바인딩하고
+  공개 인터넷에 노출하지 않는다.
 
 구체적인 현재 형식은 [메시지 계약 v1](../contracts/messages-v1.md)에 둔다.
 
@@ -125,8 +129,8 @@ Drift/SQLite다. 패키지 채택은 앱 재시작 복구 슬라이스에서 테
 
 ## 인증과 권한
 
-실제 인증 전에는 외부 바인딩, 공개 DNS 연결과 인터넷 배포를 하지 않는다. 인증
-슬라이스는 다음 불변 조건을 만족해야 한다.
+실제 Keycloak 관통과 공개 HTTPS 경계 검증 전에는 외부 바인딩, 공개 DNS 연결과 인터넷
+배포를 하지 않는다. 인증 슬라이스는 다음 불변 조건을 만족해야 한다.
 
 - 클라이언트가 보낸 사용자 ID를 신뢰하지 않고, 검증된 세션에서 사용자 ID를 얻는다.
 - HTTP와 Socket.IO가 같은 인증·세션 폐기 기준을 사용한다.
@@ -139,10 +143,11 @@ Drift/SQLite다. 패키지 채택은 앱 재시작 복구 슬라이스에서 테
 - 사람 계정과 에이전트 계정은 같은 권한 모델을 사용하되 계정 유형과 실행 주체를
   감사할 수 있어야 한다.
 
-OIDC 공급자의 우선 후보는 성숙한 오픈소스인 Keycloak이다. 그러나 별도 서비스를
-운영해야 하고 Windows·Android·iOS Flutter 클라이언트가 같은 Authorization Code +
-PKCE 흐름을 통과해야 하므로 아직 채택하지 않는다. 자체 비밀번호·JWT 구현과 Keycloak
-도입을 비교하는 인증 스파이크에서 운영 부담, 세 플랫폼 지원과 세션 폐기를 검증한다.
+인증 공급자는 [ADR 004](../adr/004-keycloak-oidc-authentication.md)에 따라 Keycloak
+OIDC를 사용한다. 설치형 앱은 시스템 브라우저의 Authorization Code + PKCE `S256`을
+사용하고, Deuce 서버는 검증한 `(issuer, subject)`를 내부 사용자에 연결한다. Keycloak은
+신원과 자격 증명, Deuce PostgreSQL은 사용자 활성 상태와 채널 멤버십의 원본이다.
+구체적인 token 전달과 세션 폐기 형식은 [인증 계약 v1](../contracts/auth-v1.md)을 따른다.
 
 ## 파일과 영상 공유
 
@@ -219,8 +224,6 @@ Windows 앱에서 파일을 선택해 R2에 직접 올리고, 메시지에 연�
 
 ## 열린 결정
 
-- Keycloak OIDC와 Deuce 자체 소규모 인증 중 어느 운영 경계를 선택할지
-- Windows·Android·iOS에서 사용할 OIDC 및 플랫폼 보안 저장소 패키지
 - 메시지 외 상태에 리소스별 커서와 워크스페이스 이벤트 커서 중 어느 방식을 적용할지
 - 단일 PUT과 multipart upload의 실제 파일 크기 기준
 - 파일 유형·최대 크기·보존 기간·삭제 복구 정책

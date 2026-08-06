@@ -2,14 +2,15 @@
 
 ## 상태와 목적
 
-이 문서는 인증 구현 전 Deuce 서버를 맥미니에 설치해 macOS 실행, PostgreSQL 보존,
-프로세스 자동 재시작과 SSH 터널 연결을 검증하는 절차다. 실제 운영 배포나 공개 인터넷
-노출 절차가 아니다.
+이 문서는 Deuce 서버의 macOS 실행, PostgreSQL 보존, 프로세스 자동 재시작과 SSH 터널
+연결을 검증한 비공개 스테이징 절차다. 실제 운영 배포나 공개 인터넷 노출 절차가 아니다.
 
-현재 서버는 `alice`·`bob` 개발 fixture를 신뢰하므로 HTTP와 Socket.IO 모두 반드시
-`127.0.0.1`에만 바인딩한다. Windows 클라이언트 검증은 Tailscale 위의 SSH 로컬 포트
-포워딩을 사용한다. 공유기 포트포워딩, 공개 DNS, Cloudflare Tunnel과 외부 바인딩은
-인증 슬라이스가 통과하기 전까지 금지한다.
+2026-08-06 맥미니에 설치한 커밋 `05e8c07`은 `alice`·`bob` 개발 fixture를 사용하는
+이전 스냅샷이다. 현재 저장소에는 Keycloak OIDC 인증이 구현됐지만 실제 realm 관통 전이라
+맥미니에는 아직 업데이트하지 않았다. 두 버전 모두 HTTP와 Socket.IO를 반드시
+`127.0.0.1`에만 바인딩한다. Windows 검증은 Tailscale 위의 SSH 로컬 포트 포워딩을
+사용하며 공유기 포트포워딩, 공개 DNS, Cloudflare Tunnel과 외부 바인딩은 별도 승인과
+공개 전 검증이 끝날 때까지 금지한다.
 
 ## 설치 구조
 
@@ -136,12 +137,18 @@ nano "$deuce_env"
 
 ```dotenv
 DEUCE_DATABASE_URL=postgresql://deuce_app:<encoded-password>@127.0.0.1:5432/deuce
+DEUCE_OIDC_ISSUER=https://auth.example.com/realms/deuce
+DEUCE_OIDC_AUDIENCE=deuce-api
+DEUCE_OIDC_JWKS_URL=https://auth.example.com/realms/deuce/protocol/openid-connect/certs
+DEUCE_OIDC_LOGOUT_AUDIENCE=deuce-windows
+DEUCE_OIDC_ACCESS_TOKEN_MAX_AGE_SECONDS=300
 HOST=127.0.0.1
 PORT=3210
 ```
 
 이 파일은 셸에서 실행하지 않고 Node의 `--env-file`로 읽는다. 설치 스크립트는 권한을
-`600`으로 고정하며 실행 로그에 값을 출력하지 않는다.
+`600`으로 고정하고 DB 및 필수 OIDC 설정이 모두 있는지 확인하며 실행 로그에 값을
+출력하지 않는다. 예시 도메인을 실제 설정 없이 사용하지 않는다.
 
 ## 빌드와 마이그레이션
 
@@ -216,7 +223,8 @@ ssh -N -L 3210:127.0.0.1:3210 afred@100.82.164.112
 ## 업데이트와 되돌리기
 
 코드 업데이트는 서버 루트에서 의존성 설치, 검증, 마이그레이션 순서로 수행한 뒤
-LaunchAgent를 다시 시작한다.
+LaunchAgent를 다시 시작한다. 인증 마이그레이션은 실제 Keycloak 설정과 첫 Deuce 사용자
+연결을 준비한 뒤에만 배포한다.
 
 ```zsh
 export PATH="$(brew --prefix node@24)/bin:$PATH"
@@ -240,10 +248,11 @@ launchctl bootout "$service"
 rm "$HOME/Library/LaunchAgents/com.goldenlab.deuce-server.plist"
 ```
 
-## 공개 전 남은 조건
+## 인증 코드 배포와 공개 전 남은 조건
 
-- 실제 사용자 인증과 `general` 채널 권한 관통 검증
-- 운영용 세션 폐기와 비밀 관리
+- 실제 Keycloak realm 설치와 Windows 시스템 브라우저 로그인 관통 검증
+- Keycloak 사용자 `sub`와 Deuce 사용자·`general` 멤버십 연결
+- 운영 issuer·audience·JWKS와 back-channel logout 등록 검증
 - PostgreSQL 자동 백업과 복원 연습
 - HTTPS 진입점, 인증서와 공개 네트워크 방식 결정
 - 외부 노출 전 방화벽과 로그의 비밀정보 점검
