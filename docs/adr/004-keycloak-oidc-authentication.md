@@ -4,6 +4,9 @@
 
 Accepted
 
+2026-08-07 맥미니 운영 배포는 [ADR 005](005-mac-mini-public-auth-ingress.md)에 따라
+구현했다.
+
 ## Context
 
 Deuce는 공개 인터넷에서 10명 이하가 사용하는 Windows·Android·iPhone 설치형 앱이다.
@@ -56,7 +59,7 @@ MFA, 토큰 갱신과 세션 폐기를 계속 소유해야 한다. Cloudflare Ac
 - Keycloak 서비스, 전용 데이터베이스, TLS, 업그레이드와 백업을 추가로 운영해야 한다.
 - 공개 운영 전 Keycloak 로그인 endpoint는 HTTPS로 제공하고 관리자 UI와 Admin API는
   별도 비공개 경계로 제한해야 한다.
-- 현재 맥미니 비공개 스테이징에는 Keycloak을 즉시 설치하지 않는다. Windows 로컬
-  인증 슬라이스를 통과한 뒤 자원 여유와 공개 HTTPS 경로를 별도로 승인받아 배포한다.
+- 맥미니 배포는 Windows 로컬 인증 슬라이스를 통과한 뒤 별도 승인된 공개 HTTPS 경로와
+  함께 진행해야 한다.
 
 구체적인 요청과 세션 폐기 형식은 [인증 계약 v1](../contracts/auth-v1.md)에 기록한다.

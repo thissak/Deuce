@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.goldenlab.deuce-keycloak</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>__DEUCE_KEYCLOAK_RUNNER__</string>
+    <string>__DEUCE_KEYCLOAK_HOME__</string>
+    <string>__DEUCE_KEYCLOAK_CONFIG__</string>
+    <string>__DEUCE_KEYCLOAK_SECRETS__</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__DEUCE_KEYCLOAK_HOME__</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>__DEUCE_KEYCLOAK_STDOUT_LOG__</string>
+  <key>StandardErrorPath</key>
+  <string>__DEUCE_KEYCLOAK_STDERR_LOG__</string>
+</dict>
+</plist>

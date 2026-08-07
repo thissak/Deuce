@@ -7,9 +7,8 @@ Deuce의 HTTP와 Socket.IO를 사용한다. 서버는 OIDC 신원을 Deuce 내�
 `general` 멤버십을 요청마다 확인한다.
 
 코드와 로컬 서명 token 기반 통합 테스트에 더해 Keycloak 26.7 loopback realm에서 실제
-Windows 로그인, access token 갱신, Socket 재연결과 로그아웃을 관통 검증했다. 공개
-인프라는 아직 연결하지 않았으며 서버는 `127.0.0.1`에서만 실행한다. 맥미니의 기존
-비공개 스테이징도 아직 이 인증 코드로 업데이트하지 않았다.
+Windows 로그인, access token 갱신, Socket 재연결과 로그아웃을 관통 검증했다. 맥미니
+상시 서비스는 별도 runbook을 따르며 개발 서버는 계속 `127.0.0.1`에서만 실행한다.
 
 ## 개발 환경
 
@@ -175,8 +174,8 @@ $env:DEUCE_LIVE_ACCESS_TOKEN_BOB = '<short-lived-token>'
 - access token은 Authorization header와 Socket.IO handshake `auth.accessToken`에서만
   받고 URL query, 메시지 payload와 로그에는 넣지 않는다.
 - refresh token과 access token은 `oidc_default_store`가 Windows 보안 저장소에 보관한다.
-- 실제 Keycloak loopback 관통은 완료했지만 공개 HTTPS와 방화벽 검증 전에는 외부
-  바인딩, 공개 DNS, 포트포워딩과 Cloudflare Tunnel을 사용하지 않는다.
+- 운영 Keycloak과 Deuce도 loopback 바인딩을 유지하고 기존 Tailscale Funnel·Caddy가
+  승인된 경로만 공개한다. 개발 환경에 공개 포트나 별도 Tunnel을 추가하지 않는다.
 - Cloudflare의 현재 범위는 비공개 R2 원본 저장소이며 사용자 인증에 사용하지 않는다.
 - `drizzle-kit`의 개발 전용 하위 의존성에서 moderate 감사 항목 4개가 보고된다. 자동
   수정은 현재 버전을 구버전으로 내리므로 적용하지 않으며 마이그레이션 CLI를 외부에

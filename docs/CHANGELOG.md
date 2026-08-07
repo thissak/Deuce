@@ -2,6 +2,12 @@
 
 ### 2026-08-07
 
+- [chore] 맥미니에 OpenJDK 25·Keycloak 26.7·전용 PostgreSQL DB와 loopback LaunchAgent 설치 — 비밀 파일 권한을 제한하고 임시 관리자를 제거해 상시 인증 서비스로 전환
+- [feat] 기존 Tailscale Funnel과 Caddy에 Deuce HTTPS 경로 연결 — 서버는 loopback을 유지하고 Keycloak 관리자·master realm 공개 경로는 404로 차단
+- [chore] 인증 커밋 `8dde4f2`를 기본 Deuce LaunchAgent로 승격하고 Alice·Bob issuer를 공개 HTTPS 값으로 원자적 이전 — 내부 사용자 UUID와 메시지 5건 보존
+- [test] 공개 Windows 앱에서 Keycloak 로그인, `/me`와 `general` 메시지 조회 확인 — Keycloak·Deuce LaunchAgent 실행과 무인증 401 경계 검증
+- [chore] Windows x64 포터블 ZIP 패키징과 SHA-256 생성 자동화 — 전체 런타임 포함, ZIP 내부 EXE 해시와 패키지 위치 기동 확인
+- [docs] 맥미니 상시 인증·공개 진입점·롤백과 Windows 포터블 배포 절차를 현재 인프라 상태로 갱신
 - [test] Windows Keycloak과 맥미니 인증 서버를 SSH 로컬·리버스 터널로 연결해 로그인·60초 token 갱신·메시지 저장·로그아웃 관통 검증 — 맥미니 세션 폐기와 Keycloak 활성 세션 0건 확인
 - [chore] 맥미니에 커밋 `8dde4f2` 분리 릴리스, 마이그레이션 전 DB 백업과 Alice·Bob 권한 연결 적용 — 기존 인증 전 LaunchAgent를 유지한 채 가역적으로 검증
 - [test] 같은 앱에서 Windows DB와 맥미니 DB를 전환하면 기존 메시지와 복구 순번이 남아 순서가 섞이는 현상 확인 — 서버별 저장 순서는 정상이며 클라이언트 상태 초기화 후속 필요

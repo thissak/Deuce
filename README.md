@@ -11,9 +11,12 @@ Slack의 익숙한 채널 UI를 참고하며 Windows·Android·iPhone을 대상�
 - Keycloak OIDC Authorization Code + PKCE 로그인과 Windows 보안 토큰 저장
 - OIDC 사용자 연결, 세션 폐기와 `general` 멤버십 권한
 
-인증 코드는 로컬 서명 토큰과 PostgreSQL 통합 테스트를 통과했지만 실제 Keycloak realm은
-아직 설치하지 않았다. 서버 기본 바인딩은 `127.0.0.1`이며 실제 Keycloak 관통과 공개
-HTTPS 경계를 검증하기 전에는 공개 인터넷에 노출하지 않는다.
+맥미니에는 Keycloak 26.7과 인증된 Deuce 서버가 LaunchAgent로 실행된다. 두 서비스는
+`127.0.0.1`에만 바인딩하고 기존 Tailscale Funnel과 Caddy가 승인된 로그인·API·Socket.IO
+경로를 공개 HTTPS로 전달한다. Windows 앱의 실제 로그인과 인증된 메시지 조회를
+확인했다.
 
 로컬 실행과 검증 방법은 [첫 메시지 로컬 실행](docs/development/local-first-slice.md)을
-따른다. 제품 범위와 현재 상태는 [진행 상태](docs/PROGRESS.md)가 기준이다.
+따른다. 맥미니 운영은 [상시 서비스 runbook](docs/infrastructure/mac-mini-production.md),
+다른 Windows PC 배포는 [포터블 패키지](docs/distribution/windows-portable.md)를 따른다.
+제품 범위와 현재 상태는 [진행 상태](docs/PROGRESS.md)가 기준이다.

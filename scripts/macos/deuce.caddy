@@ -1,0 +1,25 @@
+@deuce_keycloak_private path \
+  /keycloak/admin \
+  /keycloak/admin/* \
+  /keycloak/realms/master \
+  /keycloak/realms/master/*
+respond @deuce_keycloak_private 404
+
+@deuce_keycloak path /keycloak /keycloak/*
+reverse_proxy @deuce_keycloak 127.0.0.1:8180 {
+  header_up X-Forwarded-Host {host}
+  header_up X-Forwarded-Port 443
+  header_up X-Forwarded-Proto https
+}
+
+@deuce_http path \
+  /health \
+  /me \
+  /messages \
+  /auth/logout \
+  /auth/backchannel-logout \
+  /admin/*
+reverse_proxy @deuce_http 127.0.0.1:3210
+
+@deuce_socket path /socket.io /socket.io/*
+reverse_proxy @deuce_socket 127.0.0.1:3210

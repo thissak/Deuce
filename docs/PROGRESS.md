@@ -49,10 +49,10 @@ lifecycle: active
 
 Keycloak 26.7 loopback realm에서 Windows 시스템 브라우저 로그인, 60초 access token
 만료 뒤 갱신·Socket 재연결, 메시지 저장과 로컬·Keycloak 로그아웃을 관통 검증했다.
-공개 DNS, HTTPS 진입점과 외부 바인딩은 별도 승인된 인프라 작업으로 진행하며 그전까지
-기존 loopback·SSH 터널 경계를 유지한다.
+맥미니 운영 realm에서도 공개 HTTPS를 통한 Windows 로그인과 인증된 사용자·메시지
+조회를 확인했다.
 
-## 맥미니 비공개 스테이징
+## 맥미니 상시 서비스
 
 - [x] 실행용 JavaScript 빌드와 macOS LaunchAgent 설치 골격 작성
 - [x] loopback 전용 설치·SSH 터널 검증 절차 확정 ([ADR 003](adr/003-mac-mini-private-staging.md), [설치 방법](infrastructure/mac-mini-private-staging.md))
@@ -60,13 +60,18 @@ Keycloak 26.7 loopback realm에서 Windows 시스템 브라우저 로그인, 60�
 - [x] 맥미니 Node.js 24·PostgreSQL 17 환경 준비와 DB 마이그레이션
 - [x] LaunchAgent 실행, 비정상 종료 자동 복구와 메시지 순번 보존 확인
 - [x] 인증 버전의 Windows 로그인·token 갱신·로그아웃을 SSH 양방향 터널로 맥미니 경유 검증
-- [ ] 인증 버전을 기본 LaunchAgent로 승격
+- [x] 인증 버전을 기본 LaunchAgent로 승격
+- [x] Keycloak 26.7·전용 PostgreSQL DB를 loopback LaunchAgent로 설치
+- [x] Tailscale Funnel·Caddy 경로로 공개 HTTPS 로그인·API·Socket.IO 연결
+- [x] 공개 Windows 앱 로그인과 인증된 `general` 메시지 조회 확인
+- [ ] 공개 경로에서 token 갱신·메시지 전송·로그아웃 관통 확인
 - [ ] 맥미니 로그인·재부팅 후 LaunchAgent 자동 시작과 메시지 보존 확인
 
-인증 커밋 `8dde4f2`는 분리된 릴리스와 임시 `127.0.0.1:33210` 프로세스로 검증했고,
-인증 마이그레이션과 Alice·Bob 연결은 맥미니 DB에 적용했다. 테스트 프로세스와 터널은
-종료했으며 기본 `127.0.0.1:3210` LaunchAgent는 여전히 인증 전 커밋 `05e8c07`을
-실행한다. 공개 DNS, 포트포워딩과 외부 바인딩은 사용하지 않는다.
+인증 커밋 `8dde4f2` 릴리스가 기본 `127.0.0.1:3210` LaunchAgent로 실행된다. Keycloak과
+Deuce는 모두 loopback에만 바인딩하고 기존 Tailscale Funnel이 Caddy `:8080`을 거쳐
+승인된 경로만 프록시한다. Keycloak 관리자와 master realm 경로는 공개 Caddy에서 404로
+차단한다. 현재 운영 절차는 [맥미니 상시 서비스](infrastructure/mac-mini-production.md),
+Windows 배포는 [포터블 패키지](distribution/windows-portable.md)를 따른다.
 
 ## 제품 목표
 
