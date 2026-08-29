@@ -3,6 +3,7 @@ import secureSession from '@fastify/secure-session'
 import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
 import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
+import { authPlugin } from './plugins/auth.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -16,7 +17,19 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
 
   await app.register(secureSession, {
     key: config.sessionKey,
+    // 내부 채팅 특성상 14일 세션 (GateLab ADR 003 전례). 기본값 24h를 대체한다.
+    expiry: 60 * 60 * 24 * 14,
     cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.isProd },
+  })
+
+  await app.register(authPlugin, { config })
+
+  app.setErrorHandler((err: unknown, req, reply) => {
+    const error = err instanceof Error ? err : new Error(String(err))
+    const status = (err as any)?.statusCode ?? 500
+    if (status < 500) return reply.code(status).send({ error: error.message })
+    req.log.error(error)
+    return reply.code(500).send({ error: 'internal error' })
   })
 
   app.get('/health', async () => ({ status: 'ok' }))

@@ -14,6 +14,7 @@
     "@fastify/secure-session": "^8.3.0",
     "@prisma/client": "6.19.3",
     "fastify": "^5.12.1",
+    "fastify-plugin": "^6.0.0",
     "google-auth-library": "^11.0.2",
     "zod": "^4.4.3"
   },
