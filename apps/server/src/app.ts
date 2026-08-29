@@ -9,6 +9,7 @@ import { conversationRoutes } from './routes/conversations.js'
 import { messageRoutes } from './routes/messages.js'
 import { searchRoutes } from './routes/search.js'
 import { activityRoutes } from './routes/activity.js'
+import { setupRealtime } from './realtime/io.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -52,6 +53,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(messageRoutes, { prefix: '/api' })
   await app.register(searchRoutes, { prefix: '/api' })
   await app.register(activityRoutes, { prefix: '/api' })
+
+  setupRealtime(app, config)
 
   return app
 }
