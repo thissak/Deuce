@@ -20,3 +20,10 @@ export const MessageDtoSchema = z.object({
 })
 
 export type MessageDto = z.infer<typeof MessageDtoSchema>
+
+export const MessagePageSchema = z.object({
+  items: z.array(MessageDtoSchema),
+  nextCursor: z.string().nullable(),
+})
+
+export type MessagePage = z.infer<typeof MessagePageSchema>

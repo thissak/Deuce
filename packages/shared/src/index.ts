@@ -1,6 +1,6 @@
 export { UserDtoSchema, type UserDto } from './user.js'
-export { ConversationSummarySchema, type ConversationSummary } from './conversation.js'
-export { MessageDtoSchema, type MessageDto } from './message.js'
+export { ConversationSummarySchema, type ConversationSummary, ConversationDetailSchema, type ConversationDetail } from './conversation.js'
+export { MessageDtoSchema, type MessageDto, MessagePageSchema, type MessagePage } from './message.js'
 export { AttachmentDtoSchema, type AttachmentDto, SharedFileSchema, type SharedFile } from './attachment.js'
 export { SearchResultSchema, type SearchResult, ActivityItemSchema, type ActivityItem } from './activity.js'
 export {

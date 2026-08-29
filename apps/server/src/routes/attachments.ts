@@ -42,8 +42,13 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
     // the 'body' field can arrive after the file part, so it must be read
     // only after the file stream is fully consumed above.
     const captionField = data.fields['body']
-    const caption =
-      captionField && 'value' in captionField ? String(captionField.value).slice(0, 4000) : ''
+    const caption = captionField && 'value' in captionField ? String(captionField.value) : ''
+    if (caption.length > 4000) {
+      await deps.storage.delete(objectKey).catch((delErr: unknown) => {
+        req.log.warn({ err: delErr, objectKey }, 'failed to remove upload after invalid caption')
+      })
+      return reply.code(400).send({ error: 'invalid body' })
+    }
     const created = await prisma.message.create({
       data: {
         conversationId: id,

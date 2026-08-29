@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { UserDtoSchema } from './user.js'
+import { MessageDtoSchema } from './message.js'
 
 export const ConversationSummarySchema = z.object({
   id: z.string(),
@@ -20,3 +21,9 @@ export const ConversationSummarySchema = z.object({
 })
 
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>
+
+export const ConversationDetailSchema = ConversationSummarySchema.extend({
+  pinnedMessage: MessageDtoSchema.nullable(),
+})
+
+export type ConversationDetail = z.infer<typeof ConversationDetailSchema>
