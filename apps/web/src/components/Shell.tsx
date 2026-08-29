@@ -1,11 +1,15 @@
 import type { UserDto } from '@deuce/shared'
 import { useMutation } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from '../api/http'
 import { ActivityPage } from './ActivityPage'
 import { ChatPage } from './ChatPage'
 
 export function Shell({ me }: { me: UserDto }) {
+  const [notifyAsked, setNotifyAsked] = useState(
+    typeof Notification === 'undefined' || Notification.permission !== 'default',
+  )
   const logout = useMutation({
     mutationFn: () => api('/auth/logout', { method: 'POST' }),
     // 전체 리로드가 소켓·캐시·세션 상태를 한 번에 정리한다
@@ -25,13 +29,29 @@ export function Shell({ me }: { me: UserDto }) {
         </button>
       </nav>
       <main className="shell-main">
-        <Routes>
-          <Route path="/" element={<Navigate to="/chat" replace />} />
-          <Route path="/chat" element={<ChatPage me={me} />} />
-          <Route path="/chat/:conversationId" element={<ChatPage me={me} />} />
-          <Route path="/activity" element={<ActivityPage />} />
-          <Route path="*" element={<Navigate to="/chat" replace />} />
-        </Routes>
+        <div className="shell-col">
+          {!notifyAsked && (
+            <div className="notify-banner">
+              새 메시지 알림을 받으시겠어요?
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  void Notification.requestPermission().finally(() => setNotifyAsked(true))
+                }}
+              >
+                알림 켜기
+              </button>
+              <button className="btn-plain" onClick={() => setNotifyAsked(true)}>나중에</button>
+            </div>
+          )}
+          <Routes>
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+            <Route path="/chat" element={<ChatPage me={me} />} />
+            <Route path="/chat/:conversationId" element={<ChatPage me={me} />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="*" element={<Navigate to="/chat" replace />} />
+          </Routes>
+        </div>
       </main>
     </div>
   )

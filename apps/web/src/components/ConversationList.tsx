@@ -7,6 +7,7 @@ import { filterConversations, previewText, type ConvoFilter } from '../lib/conve
 import { formatTime } from '../lib/format'
 import { NewChatDialog } from './NewChatDialog'
 import { PresenceDot } from './PresenceDot'
+import { SearchBox } from './SearchBox'
 
 export function ConversationList({ me, activeId }: { me: UserDto; activeId?: string }) {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ export function ConversationList({ me, activeId }: { me: UserDto; activeId?: str
         <button className={`chip ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>전체</button>
         <button className={`chip ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')}>읽지 않음</button>
       </div>
+      <SearchBox />
       <ul className="convo-list">
         {shown.map((c) => {
           const other = c.type === 'DM' ? c.members.find((u) => u.id !== me.id) : undefined

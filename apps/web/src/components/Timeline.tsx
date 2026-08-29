@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { apiJson } from '../api/http'
 import { conversationsKey, messagesQuery } from '../api/queries'
+import { useJumpToMessage } from '../lib/useJumpToMessage'
 import { MessageBubble } from './MessageBubble'
 
 /** 최신 메시지가 보이는 상태(탭 표시 중)일 때만 읽음 커서를 전진시킨다. 서버가 후퇴를 막아주므로 낙관 전송. */
@@ -30,11 +31,13 @@ export function Timeline({
   conversationId,
   members,
   onReply,
+  jumpToId,
 }: {
   me: UserDto
   conversationId: string
   members: UserDto[]
   onReply: (m: MessageDto) => void
+  jumpToId?: string | null
 }) {
   const q = useInfiniteQuery(messagesQuery(conversationId))
   const listRef = useRef<HTMLDivElement>(null)
@@ -44,6 +47,13 @@ export function Timeline({
   const messages = useMemo(() => (q.data ? q.data.pages.flatMap((p) => p.items).reverse() : []), [q.data])
   const newest = messages[messages.length - 1]
   useAdvanceRead(conversationId, newest?.id)
+
+  const jump = useJumpToMessage(q)
+  useEffect(() => {
+    if (!jumpToId) return
+    atBottomRef.current = false // 점프 중에는 하단 자동 추종을 끈다
+    jump(jumpToId)
+  }, [jumpToId, jump])
 
   useLayoutEffect(() => {
     const el = listRef.current

@@ -1,7 +1,7 @@
 import type { MessageDto, UserDto } from '@deuce/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/http'
 import { conversationDetailQuery, conversationKey, conversationsKey } from '../api/queries'
 import { truncate } from '../lib/format'
@@ -17,6 +17,8 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const jumpToId = params.get('m')
 
   const mute = useMutation({
     mutationFn: () => api(`/api/conversations/${conversationId}/mute`, { method: detail.data?.mutedAt ? 'DELETE' : 'PUT' }),
@@ -67,16 +69,19 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
         </div>
       </header>
       {c.pinnedMessage && tab === 'chat' && (
-        <button
-          className="pin-banner"
-          onClick={() => document.getElementById(`msg-${c.pinnedMessage!.id}`)?.scrollIntoView({ block: 'center' })}
-        >
+        <button className="pin-banner" onClick={() => setParams({ m: c.pinnedMessage!.id })}>
           📌 {c.pinnedMessage.deleted ? '삭제된 메시지입니다' : truncate(c.pinnedMessage.body, 80)}
         </button>
       )}
       {tab === 'chat' ? (
         <>
-          <Timeline me={me} conversationId={conversationId} members={c.members} onReply={setReplyTo} />
+          <Timeline
+            me={me}
+            conversationId={conversationId}
+            members={c.members}
+            onReply={setReplyTo}
+            jumpToId={jumpToId}
+          />
           <Composer
             me={me}
             conversationId={conversationId}
