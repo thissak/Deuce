@@ -34,10 +34,17 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
   })
 
   io.on('connection', async (socket) => {
-    const userId = socket.data.userId as string
-    await socket.join(`user:${userId}`)
-    const memberships = await prisma.conversationMember.findMany({ where: { userId } })
-    await socket.join(memberships.map((m) => `convo:${m.conversationId}`))
+    try {
+      const userId = socket.data.userId as string
+      await socket.join(`user:${userId}`)
+      if (socket.disconnected) return
+      const memberships = await prisma.conversationMember.findMany({ where: { userId } })
+      if (socket.disconnected) return
+      await socket.join(memberships.map((m) => `convo:${m.conversationId}`))
+    } catch (err) {
+      app.log.error(err)
+      socket.disconnect(true)
+    }
   })
 
   app.decorate('io', io)
