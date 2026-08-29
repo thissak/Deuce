@@ -24,7 +24,13 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     key: config.sessionKey,
     // 내부 채팅 특성상 14일 세션 (GateLab ADR 003 전례). 기본값 24h를 대체한다.
     expiry: 60 * 60 * 24 * 14,
-    cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.isProd },
+    cookie: {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: config.isProd,
+      maxAge: 60 * 60 * 24 * 14,
+    },
   })
 
   await app.register(authPlugin, { config })

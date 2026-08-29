@@ -130,6 +130,7 @@ describe('google login', () => {
     for (const cookie of cookies) {
       expect(cookie).toMatch(/HttpOnly/i)
       expect(cookie).toMatch(/SameSite=Lax/i)
+      expect(cookie).toMatch(/Max-Age=1209600/i)
     }
   })
 

@@ -114,6 +114,8 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string }
     const me = req.currentUser.id
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
+    const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
+    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
     await prisma.conversationMember.delete({
       where: { conversationId_userId: { conversationId: id, userId: me } },
     })
