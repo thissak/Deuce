@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Composer } from '../src/components/Composer'
@@ -50,5 +50,18 @@ describe('Composer', () => {
     renderComposer(fn as unknown as typeof fetch)
     await userEvent.type(screen.getByRole('textbox'), '줄1{Shift>}{Enter}{/Shift}줄2')
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  // 한국어 IME: 조합 확정 Enter가 전송으로 새면 안 된다 (Composer의 isComposing 가드)
+  it('IME 조합 중 Enter는 전송하지 않는다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch)
+    const box = screen.getByRole('textbox')
+    await userEvent.type(box, '안녕하세')
+    await act(async () => {
+      fireEvent.keyDown(box, { key: 'Enter', isComposing: true })
+    })
+    expect(fn).not.toHaveBeenCalled()
+    expect((box as HTMLTextAreaElement).value).toBe('안녕하세')
   })
 })
