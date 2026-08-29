@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember, summarizeConversation } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
@@ -183,6 +184,11 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       where: { userId_conversationId: { userId: me, conversationId: id } },
       create: { userId: me, conversationId: id, lastReadMessageId: msg.id },
       update: { lastReadMessageId: msg.id },
+    })
+    app.io.to(`convo:${id}`).emit(RT.readAdvanced, {
+      conversationId: id,
+      userId: me,
+      lastReadMessageId: msg.id,
     })
     return reply.code(200).send({ conversationId: id, lastReadMessageId: msg.id })
   })
