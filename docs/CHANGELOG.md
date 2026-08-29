@@ -30,5 +30,4 @@
 - [fix] 최종 리뷰 수정 웨이브 — `email_verified` 미검증(Critical), 콜백
   예외 메시지 노출, oauthState 재생 공격, 보안 계약(§8) 테스트 공백,
   서버 부팅 경로의 암묵적 env 로딩 등 Critical 1건·Important 5건·
-  Minor 4건 수정. 상세는
-  `.superpowers/sdd/2026-08-29-server-foundation/fix-wave-report.md`
+  Minor 4건 수정. 상세는 PR #2 (커밋 9c9e7d0·e40c128) 참고
