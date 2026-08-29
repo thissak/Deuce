@@ -1,0 +1,39 @@
+import { z } from 'zod'
+
+const EnvSchema = z.object({
+  PORT: z.coerce.number().default(4000),
+  DATABASE_URL: z.string().min(1),
+  SESSION_KEY_HEX: z.string().regex(/^[0-9a-f]{64}$/),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CALLBACK_URL: z.string().url(),
+  ALLOWED_EMAILS: z.string().min(1),
+  NODE_ENV: z.string().default('development'),
+})
+
+export interface AppConfig {
+  port: number
+  databaseUrl: string
+  sessionKey: Buffer
+  google: { clientId: string; clientSecret: string; callbackUrl: string }
+  allowedEmails: string[]
+  isProd: boolean
+}
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const parsed = EnvSchema.parse(env)
+  return {
+    port: parsed.PORT,
+    databaseUrl: parsed.DATABASE_URL,
+    sessionKey: Buffer.from(parsed.SESSION_KEY_HEX, 'hex'),
+    google: {
+      clientId: parsed.GOOGLE_CLIENT_ID,
+      clientSecret: parsed.GOOGLE_CLIENT_SECRET,
+      callbackUrl: parsed.GOOGLE_CALLBACK_URL,
+    },
+    allowedEmails: parsed.ALLOWED_EMAILS.split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+    isProd: parsed.NODE_ENV === 'production',
+  }
+}
