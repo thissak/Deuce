@@ -57,10 +57,20 @@ export function MessageBubble({
     )
   }
 
+  // 편집 닫기는 성공 후 — 실패하면 입력을 잃지 않고 다시 저장할 수 있어야 한다
   const saveEdit = () => {
     if (draft.trim().length === 0) return
-    action.mutate({ method: 'PATCH', path: `/api/messages/${m.id}`, body: { body: draft } })
-    setEditing(false)
+    action.mutate(
+      { method: 'PATCH', path: `/api/messages/${m.id}`, body: { body: draft } },
+      { onSuccess: () => setEditing(false) },
+    )
+  }
+
+  const startEdit = () => {
+    action.reset() // 앞선 액션 실패 문구가 편집창에 남지 않도록
+    setDraft(m.body)
+    setConfirmDelete(false)
+    setEditing(true)
   }
 
   return (
@@ -85,6 +95,7 @@ export function MessageBubble({
           ) : editing ? (
             <div>
               <textarea value={draft} maxLength={4000} onChange={(e) => setDraft(e.target.value)} rows={2} />
+              {action.isError && <div className="composer-error">수정에 실패했습니다. 다시 시도해 주세요.</div>}
               <div className="dialog-actions">
                 <button className="btn-plain" onClick={() => setEditing(false)}>
                   취소
@@ -115,24 +126,18 @@ export function MessageBubble({
               >
                 {m.pinnedAt ? '고정 해제' : '고정'}
               </button>
-              {isMine && (
-                <button
-                  onClick={() => {
-                    setDraft(m.body)
-                    setEditing(true)
-                  }}
-                >
-                  수정
-                </button>
-              )}
+              {isMine && <button onClick={startEdit}>수정</button>}
               {isMine &&
                 (confirmDelete ? (
-                  <button
-                    className="btn-danger"
-                    onClick={() => action.mutate({ method: 'DELETE', path: `/api/messages/${m.id}` })}
-                  >
-                    정말 삭제
-                  </button>
+                  <>
+                    <button
+                      className="btn-danger"
+                      onClick={() => action.mutate({ method: 'DELETE', path: `/api/messages/${m.id}` })}
+                    >
+                      정말 삭제
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)}>취소</button>
+                  </>
                 ) : (
                   <button onClick={() => setConfirmDelete(true)}>삭제</button>
                 ))}

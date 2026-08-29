@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messagesKey } from '../src/api/queries'
 import { MessageBubble } from '../src/components/MessageBubble'
+import type { MessagesData } from '../src/realtime/cache'
 import { msg } from './cache.test'
 
 const meId = 'u1'
@@ -18,9 +19,15 @@ function jsonStub(payload: unknown, status = 200) {
   )
 }
 
-function renderBubble(m: MessageDto, fn: ReturnType<typeof jsonStub>, isMine = true) {
+function renderBubble(m: MessageDto, fn: ReturnType<typeof jsonStub>, isMine = true, seed?: MessageDto[]) {
   vi.stubGlobal('fetch', fn)
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  if (seed) {
+    qc.setQueryData<MessagesData>(messagesKey('c1'), {
+      pages: [{ items: seed, nextCursor: null }],
+      pageParams: [''],
+    })
+  }
   render(
     <QueryClientProvider client={qc}>
       <MessageBubble m={m} isMine={isMine} meId={meId} memberNames={[]} onReply={() => {}} />
@@ -45,6 +52,26 @@ describe('MessageBubble 액션', () => {
     expect(path).toBe('/api/messages/m1/reactions')
     expect(init.method).toBe('PUT')
     expect(JSON.parse(init.body as string)).toEqual({ emoji: '👍' })
+  })
+
+  it('반응 200 응답을 캐시의 해당 메시지에 반영한다', async () => {
+    const fn = jsonStub(msg({ reactions: [{ emoji: '👍', userIds: [meId] }] }))
+    const qc = renderBubble(msg({}), fn, true, [msg({ id: 'm2' }), msg({})])
+    await userEvent.click(screen.getByRole('button', { name: '👍' }))
+    await waitFor(() => {
+      const items = qc.getQueryData<MessagesData>(messagesKey('c1'))?.pages[0]?.items
+      expect(items?.[1]?.reactions).toEqual([{ emoji: '👍', userIds: [meId] }])
+      expect(items?.[0]?.reactions).toEqual([]) // 다른 메시지는 건드리지 않는다
+    })
+  })
+
+  it('삭제 204 응답 뒤 타임라인을 재조회한다', async () => {
+    const fn = jsonStub(null, 204)
+    const qc = renderBubble(msg({}), fn)
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '정말 삭제' }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: messagesKey('c1') }))
   })
 
   it('내 반응 칩을 다시 누르면 DELETE로 취소한다 (이모지는 URL 인코딩)', async () => {
@@ -95,6 +122,18 @@ describe('MessageBubble 액션', () => {
     expect(path).toBe('/api/messages/m1')
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({ body: '고침' })
+    await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull()) // 성공해야 편집이 닫힌다
+  })
+
+  it('수정이 실패하면 편집 모드와 입력을 유지하고 안내한다', async () => {
+    const fn = jsonStub({ error: 'author only' }, 403)
+    renderBubble(msg({ body: '원본' }), fn)
+    await userEvent.click(screen.getByRole('button', { name: '수정' }))
+    await userEvent.clear(screen.getByRole('textbox'))
+    await userEvent.type(screen.getByRole('textbox'), '고침')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByText(/수정에 실패했습니다/)).toBeTruthy()
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('고침')
   })
 
   it('삭제는 두 단계 확인을 거친다', async () => {
@@ -107,5 +146,25 @@ describe('MessageBubble 액션', () => {
     const [path, init] = lastCall(fn)
     expect(path).toBe('/api/messages/m1')
     expect(init.method).toBe('DELETE')
+  })
+
+  it('삭제 확인은 취소로 되돌릴 수 있다', async () => {
+    const fn = jsonStub(null, 204)
+    renderBubble(msg({}), fn)
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '취소' }))
+    expect(screen.queryByRole('button', { name: '정말 삭제' })).toBeNull()
+    expect(screen.getByRole('button', { name: '삭제' })).toBeTruthy()
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('수정으로 들어가면 삭제 확인이 풀린다', async () => {
+    const fn = jsonStub(null, 204)
+    renderBubble(msg({ body: '원본' }), fn)
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '수정' }))
+    await userEvent.click(screen.getByRole('button', { name: '취소' })) // 편집 취소
+    expect(screen.queryByRole('button', { name: '정말 삭제' })).toBeNull()
+    expect(fn).not.toHaveBeenCalled()
   })
 })
