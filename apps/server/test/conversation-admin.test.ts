@@ -104,6 +104,92 @@ describe('conversation admin & read cursor', () => {
     expect((await mySummary(t, t.aCookie)).unreadCount).toBe(0)
   })
 
+  it('rejects leaving a dm', async () => {
+    const t = await setupGroup()
+    const dm = await t.app.inject({
+      method: 'POST', url: '/api/conversations', headers: { cookie: t.aCookie },
+      payload: { type: 'dm', otherUserId: t.ids.b },
+    })
+    const dmId = (dm.json() as { id: string }).id
+    const leave = await t.app.inject({
+      method: 'DELETE', url: `/api/conversations/${dmId}/members/me`, headers: { cookie: t.aCookie },
+    })
+    expect(leave.statusCode).toBe(400)
+    expect(leave.json()).toEqual({ error: 'group only' })
+  })
+
+  it('counts unread only from messages sent after a member joins', async () => {
+    const t = await setupGroup()
+    const send = async (body: string) =>
+      (
+        await t.app.inject({
+          method: 'POST', url: `/api/conversations/${t.groupId}/messages`,
+          headers: { cookie: t.bCookie }, payload: { body },
+        })
+      ).json() as { id: string }
+    await send('가입 전 메시지 1')
+    await send('가입 전 메시지 2')
+
+    const cCookie = await t.loginAs('c@goldenlabs.dev', 'C')
+    const add = await t.app.inject({
+      method: 'POST', url: `/api/conversations/${t.groupId}/members`, headers: { cookie: t.aCookie },
+      payload: { userIds: [t.ids.c] },
+    })
+    expect(add.statusCode).toBe(200)
+
+    expect((await mySummary(t, cCookie)).unreadCount).toBe(0)
+
+    await send('가입 후 메시지')
+    expect((await mySummary(t, cCookie)).unreadCount).toBe(1)
+  })
+
+  it('orders the conversation list by most recent message', async () => {
+    const t = await makeTestApp()
+    const aCookie = await t.loginAs('a@goldenlabs.dev', 'A')
+    const bCookie = await t.loginAs('b@goldenlabs.dev', 'B')
+    const cCookie = await t.loginAs('c@goldenlabs.dev', 'C')
+    const users = (
+      await t.app.inject({ method: 'GET', url: '/api/users', headers: { cookie: aCookie } })
+    ).json() as UserDto[]
+    const id = (email: string) => users.find((u) => u.email === email)!.id
+
+    const convo1 = (
+      await t.app.inject({
+        method: 'POST', url: '/api/conversations', headers: { cookie: aCookie },
+        payload: { type: 'dm', otherUserId: id('b@goldenlabs.dev') },
+      })
+    ).json() as { id: string }
+    const convo2 = (
+      await t.app.inject({
+        method: 'POST', url: '/api/conversations', headers: { cookie: aCookie },
+        payload: { type: 'dm', otherUserId: id('c@goldenlabs.dev') },
+      })
+    ).json() as { id: string }
+
+    await t.app.inject({
+      method: 'POST', url: `/api/conversations/${convo1.id}/messages`,
+      headers: { cookie: bCookie }, payload: { body: '먼저' },
+    })
+    await t.app.inject({
+      method: 'POST', url: `/api/conversations/${convo2.id}/messages`,
+      headers: { cookie: cCookie }, payload: { body: '나중' },
+    })
+
+    const list1 = (
+      await t.app.inject({ method: 'GET', url: '/api/conversations', headers: { cookie: aCookie } })
+    ).json() as ConversationSummary[]
+    expect(list1.map((c) => c.id)).toEqual([convo2.id, convo1.id])
+
+    await t.app.inject({
+      method: 'POST', url: `/api/conversations/${convo1.id}/messages`,
+      headers: { cookie: bCookie }, payload: { body: '또 먼저 방에' },
+    })
+    const list2 = (
+      await t.app.inject({ method: 'GET', url: '/api/conversations', headers: { cookie: aCookie } })
+    ).json() as ConversationSummary[]
+    expect(list2.map((c) => c.id)).toEqual([convo1.id, convo2.id])
+  })
+
   it('rejects rename of a dm and by a non-member', async () => {
     const t = await setupGroup()
     const cCookie = await t.loginAs('c@goldenlabs.dev', 'C')

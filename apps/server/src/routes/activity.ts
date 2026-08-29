@@ -9,13 +9,27 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
   app.get('/activity', async (req) => {
     const me = req.currentUser.id
     const mentions = await prisma.mention.findMany({
-      where: { mentionedUserId: me, message: { deletedAt: null, authorId: { not: me } } },
+      where: {
+        mentionedUserId: me,
+        message: {
+          deletedAt: null,
+          authorId: { not: me },
+          conversation: { members: { some: { userId: me } } },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 30,
       include: { message: { include: { author: true } } },
     })
     const reactions = await prisma.reaction.findMany({
-      where: { userId: { not: me }, message: { authorId: me, deletedAt: null } },
+      where: {
+        userId: { not: me },
+        message: {
+          authorId: me,
+          deletedAt: null,
+          conversation: { members: { some: { userId: me } } },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 30,
       include: { message: true, user: true },

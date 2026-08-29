@@ -97,4 +97,35 @@ describe('search & activity', () => {
     expect(kinds).toEqual(['mention', 'reaction'])
     for (const item of items) expect(item.actor.email).toBe('b@goldenlabs.dev')
   })
+
+  it('drops activity from a conversation I have since left', async () => {
+    const t = await setup()
+    const users = (
+      await t.app.inject({ method: 'GET', url: '/api/users', headers: { cookie: t.aCookie } })
+    ).json() as { id: string; email: string }[]
+    const bId = users.find((u) => u.email === 'b@goldenlabs.dev')!.id
+    const group = await t.app.inject({
+      method: 'POST', url: '/api/conversations', headers: { cookie: t.aCookie },
+      payload: { type: 'group', title: '그룹', memberIds: [bId] },
+    })
+    const groupId = (group.json() as { id: string }).id
+    await t.app.inject({
+      method: 'POST', url: `/api/conversations/${groupId}/messages`, headers: { cookie: t.bCookie },
+      payload: { body: '@A 확인 부탁', mentions: [t.aId] },
+    })
+    const before = await t.app.inject({
+      method: 'GET', url: '/api/activity', headers: { cookie: t.aCookie },
+    })
+    expect((before.json() as unknown[]).map((x) => ActivityItemSchema.parse(x))).toHaveLength(1)
+
+    const leave = await t.app.inject({
+      method: 'DELETE', url: `/api/conversations/${groupId}/members/me`, headers: { cookie: t.aCookie },
+    })
+    expect(leave.statusCode).toBe(204)
+
+    const after = await t.app.inject({
+      method: 'GET', url: '/api/activity', headers: { cookie: t.aCookie },
+    })
+    expect(after.json()).toEqual([])
+  })
 })

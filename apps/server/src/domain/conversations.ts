@@ -28,15 +28,16 @@ export async function summarizeConversation(conversationId: string, meId: string
     const lr = await prisma.message.findUnique({ where: { id: read.lastReadMessageId } })
     lastReadAt = lr?.createdAt ?? null
   }
+  const meMember = convo.members.find((m) => m.userId === meId)
+  const baseline = lastReadAt ?? meMember?.joinedAt ?? null
   const unreadCount = await prisma.message.count({
     where: {
       conversationId,
       deletedAt: null,
       authorId: { not: meId },
-      ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+      ...(baseline ? { createdAt: { gt: baseline } } : {}),
     },
   })
-  const meMember = convo.members.find((m) => m.userId === meId)
   const others = convo.members.filter((m) => m.userId !== meId)
   const displayName =
     convo.type === 'GROUP' ? (convo.title ?? '') : (others[0]?.user.name ?? '(알 수 없음)')
