@@ -77,7 +77,7 @@ model Message {
 model Attachment {
   id          String @id @default(uuid())
   messageId   String
-  objectKey   String // GCS 오브젝트 키
+  objectKey   String // 스토리지 오브젝트 키
   fileName    String
   size        Int
   contentType String

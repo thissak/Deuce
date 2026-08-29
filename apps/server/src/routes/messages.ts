@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
@@ -50,7 +51,9 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       },
       include: messageInclude,
     })
-    return reply.code(201).send(toMessageDto(created))
+    const dto = toMessageDto(created)
+    app.io.to(`convo:${id}`).emit(RT.messageNew, dto)
+    return reply.code(201).send(dto)
   })
 
   app.get('/conversations/:id/messages', async (req, reply) => {
@@ -100,7 +103,9 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       data: { body: parsed.data.body, editedAt: new Date() },
       include: messageInclude,
     })
-    return reply.code(200).send(toMessageDto(updated))
+    const dto = toMessageDto(updated)
+    app.io.to(`convo:${updated.conversationId}`).emit(RT.messageUpdated, dto)
+    return reply.code(200).send(dto)
   })
 
   app.delete('/messages/:id', async (req, reply) => {
@@ -109,6 +114,8 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     if (!msg) return reply.code(404).send({ error: 'message not found' })
     if (msg.authorId !== req.currentUser.id) return reply.code(403).send({ error: 'author only' })
     await prisma.message.update({ where: { id }, data: { deletedAt: new Date() } })
+    const masked = await prisma.message.findUniqueOrThrow({ where: { id }, include: messageInclude })
+    app.io.to(`convo:${masked.conversationId}`).emit(RT.messageDeleted, toMessageDto(masked))
     return reply.code(204).send()
   })
 
@@ -116,6 +123,7 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
+    if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
     const parsed = z.object({ emoji: z.string().min(1).max(32) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     await prisma.reaction.upsert({
@@ -127,7 +135,12 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       create: { messageId: id, userId: req.currentUser.id, emoji: parsed.data.emoji },
       update: {},
     })
-    return reply.code(204).send()
+    const updated = await prisma.message.findUniqueOrThrow({
+      where: { id }, include: messageInclude,
+    })
+    const dto = toMessageDto(updated)
+    app.io.to(`convo:${updated.conversationId}`).emit(RT.reactionChanged, dto)
+    return reply.code(200).send(dto)
   })
 
   app.delete('/messages/:id/reactions/:emoji', async (req, reply) => {
@@ -137,22 +150,36 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     await prisma.reaction.deleteMany({
       where: { messageId: id, userId: req.currentUser.id, emoji },
     })
-    return reply.code(204).send()
+    const updated = await prisma.message.findUniqueOrThrow({
+      where: { id }, include: messageInclude,
+    })
+    const dto = toMessageDto(updated)
+    app.io.to(`convo:${updated.conversationId}`).emit(RT.reactionChanged, dto)
+    return reply.code(200).send(dto)
   })
 
   app.put('/messages/:id/pin', async (req, reply) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
-    await prisma.message.update({ where: { id }, data: { pinnedAt: new Date() } })
-    return reply.code(204).send()
+    if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
+    const updated = await prisma.message.update({
+      where: { id }, data: { pinnedAt: new Date() }, include: messageInclude,
+    })
+    const dto = toMessageDto(updated)
+    app.io.to(`convo:${updated.conversationId}`).emit(RT.messageUpdated, dto)
+    return reply.code(200).send(dto)
   })
 
   app.delete('/messages/:id/pin', async (req, reply) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
-    await prisma.message.update({ where: { id }, data: { pinnedAt: null } })
-    return reply.code(204).send()
+    const updated = await prisma.message.update({
+      where: { id }, data: { pinnedAt: null }, include: messageInclude,
+    })
+    const dto = toMessageDto(updated)
+    app.io.to(`convo:${updated.conversationId}`).emit(RT.messageUpdated, dto)
+    return reply.code(200).send(dto)
   })
 }

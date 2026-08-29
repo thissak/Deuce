@@ -43,3 +43,20 @@
   기준선 joinedAt, 대화방 목록 정렬 회귀 테스트
 - [docs] 스펙 §8 보강 — 골든랩 메일은 네이버웍스라 구성원은 개인 구글
   계정으로 로그인, OAuth 동의 화면은 External + 테스트 사용자 방식 확정
+
+- [feat] 계획 ③ 실시간·프레즌스·파일 — Socket.IO(세션 쿠키 인증, user/convo
+  룸, 가드된 접속 핸들러), 이벤트 브로드캐스트(message.new/updated/deleted,
+  reaction.changed, read.advanced, conversation.created/updated/removed +
+  룸 동기화), 인메모리 프레즌스(online/away/offline + GET /api/presence),
+  서버 경유 파일 첨부(FileStorage 드라이버·경로 탈출 가드·고아 파일 정리·
+  multipart 업로드→메시지·스트림 다운로드·공유 탭). 실 DB·실 소켓 테스트 64개
+- [feat] 계획 ② 이월분 정리 — 그룹 타인 제거 엔드포인트, 반응·핀·읽음
+  라우트의 DTO 반환 전환, 삭제 메시지 가드, 읽음 커서·안읽음 카운트의
+  (createdAt,id) 페이지네이션 정합
+- [fix] 계획 ③ 최종 리뷰 수정 웨이브 — 256KB+ 업로드 캡션 소실(멀티파트
+  필드 파싱 순서), Socket.IO 이벤트 타입 계약(`ServerToClientEvents` 등
+  shared 고정), 확장자 세정(`photo.jpg (1)` 500 방지), 삭제 메시지 첨부
+  메타 마스킹, 핸드셰이크 실패 로깅, 다운로드 content-length·nosniff
+- [docs] 스펙 §3·§6 문구 — 파일 첨부를 GCS 서명 URL 직행에서 서버 경유 +
+  스토리지 드라이버(개발 로컬 디스크, 운영 GCS는 계획 ⑥)로 변경 — 다운로드
+  마다 멤버십 검사, 개발·운영 단일 흐름

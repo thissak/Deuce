@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import secureSession from '@fastify/secure-session'
+import multipart from '@fastify/multipart'
 import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
 import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
@@ -9,6 +10,10 @@ import { conversationRoutes } from './routes/conversations.js'
 import { messageRoutes } from './routes/messages.js'
 import { searchRoutes } from './routes/search.js'
 import { activityRoutes } from './routes/activity.js'
+import { presenceRoutes } from './routes/presence.js'
+import { attachmentRoutes } from './routes/attachments.js'
+import { LocalDiskStorage } from './storage.js'
+import { setupRealtime } from './realtime/io.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -18,7 +23,12 @@ export interface AppOptions {
 
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
   const config = opts.config ?? loadConfig()
-  const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
+  const app = Fastify({
+    logger: process.env.NODE_ENV !== 'test',
+    // 테스트에서 keep-alive 소켓이 idle로 표시되기 직전에 app.close()가 호출되면
+    // 레이스로 종료가 멈출 수 있다 (Fastify 기본값 'idle'은 idle 소켓만 정리).
+    forceCloseConnections: process.env.NODE_ENV === 'test' ? true : 'idle',
+  })
 
   await app.register(secureSession, {
     key: config.sessionKey,
@@ -34,6 +44,10 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   })
 
   await app.register(authPlugin, { config })
+
+  await app.register(multipart, {
+    limits: { fileSize: config.maxUploadBytes, files: 1 },
+  })
 
   app.setErrorHandler((err: unknown, req, reply) => {
     const error = err instanceof Error ? err : new Error(String(err))
@@ -52,6 +66,13 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(messageRoutes, { prefix: '/api' })
   await app.register(searchRoutes, { prefix: '/api' })
   await app.register(activityRoutes, { prefix: '/api' })
+  await app.register(attachmentRoutes, {
+    prefix: '/api',
+    storage: new LocalDiskStorage(config.uploadDir),
+  })
+
+  setupRealtime(app, config)
+  await app.register(presenceRoutes, { prefix: '/api' })
 
   return app
 }

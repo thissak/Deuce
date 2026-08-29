@@ -93,14 +93,16 @@ describe('conversation admin & read cursor', () => {
       method: 'PUT', url: `/api/conversations/${t.groupId}/read`, headers: { cookie: t.aCookie },
       payload: { messageId: m2.id },
     })
-    expect(read2.statusCode).toBe(204)
+    expect(read2.statusCode).toBe(200)
+    expect(read2.json()).toEqual({ conversationId: t.groupId, lastReadMessageId: m2.id })
     expect((await mySummary(t, t.aCookie)).unreadCount).toBe(0)
 
     const rewind = await t.app.inject({
       method: 'PUT', url: `/api/conversations/${t.groupId}/read`, headers: { cookie: t.aCookie },
       payload: { messageId: m1.id },
     })
-    expect(rewind.statusCode).toBe(204)
+    expect(rewind.statusCode).toBe(200)
+    expect((rewind.json() as { lastReadMessageId: string }).lastReadMessageId).toBe(m2.id)
     expect((await mySummary(t, t.aCookie)).unreadCount).toBe(0)
   })
 

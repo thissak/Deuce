@@ -1,5 +1,6 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember, summarizeConversation } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
@@ -12,6 +13,13 @@ const CreateSchema = z.discriminatedUnion('type', [
     memberIds: z.array(z.string()).min(1).max(50),
   }),
 ])
+
+function announceConversation(app: FastifyInstance, memberIds: string[], conversationId: string): void {
+  for (const uid of memberIds) {
+    app.io.in(`user:${uid}`).socketsJoin(`convo:${conversationId}`)
+    app.io.to(`user:${uid}`).emit(RT.conversationCreated, { conversationId })
+  }
+}
 
 export const conversationRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate)
@@ -39,6 +47,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       const convo = await prisma.conversation.create({
         data: { type: 'DM', members: { create: [{ userId: me }, { userId: otherUserId }] } },
       })
+      announceConversation(app, [me, otherUserId], convo.id)
       return reply.code(201).send(await summarizeConversation(convo.id, me))
     }
 
@@ -52,6 +61,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
         members: { create: memberIds.map((userId) => ({ userId })) },
       },
     })
+    announceConversation(app, memberIds, convo.id)
     return reply.code(201).send(await summarizeConversation(convo.id, me))
   })
 
@@ -89,6 +99,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const parsed = z.object({ title: z.string().min(1).max(100) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     await prisma.conversation.update({ where: { id }, data: { title: parsed.data.title } })
+    app.io.to(`convo:${id}`).emit(RT.conversationUpdated, { conversationId: id })
     return reply.code(200).send(await summarizeConversation(id, me))
   })
 
@@ -107,6 +118,8 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       data: userIds.map((userId) => ({ conversationId: id, userId })),
       skipDuplicates: true,
     })
+    announceConversation(app, userIds, id)
+    app.io.to(`convo:${id}`).emit(RT.conversationUpdated, { conversationId: id })
     return reply.code(200).send(await summarizeConversation(id, me))
   })
 
@@ -119,7 +132,27 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     await prisma.conversationMember.delete({
       where: { conversationId_userId: { conversationId: id, userId: me } },
     })
+    app.io.to(`user:${me}`).emit(RT.conversationRemoved, { conversationId: id })
+    app.io.in(`user:${me}`).socketsLeave(`convo:${id}`)
+    app.io.to(`convo:${id}`).emit(RT.conversationUpdated, { conversationId: id })
     return reply.code(204).send()
+  })
+
+  app.delete('/conversations/:id/members/:userId', async (req, reply) => {
+    const { id, userId } = req.params as { id: string; userId: string }
+    const me = req.currentUser.id
+    if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
+    const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
+    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (!(await isMember(id, userId))) return reply.code(404).send({ error: 'member not found' })
+    // ReadState는 남긴다 — 재가입 시 부재 기간 메시지를 안 읽음으로 보이게 하는 의도된 정책
+    await prisma.conversationMember.delete({
+      where: { conversationId_userId: { conversationId: id, userId } },
+    })
+    app.io.to(`user:${userId}`).emit(RT.conversationRemoved, { conversationId: id })
+    app.io.in(`user:${userId}`).socketsLeave(`convo:${id}`)
+    app.io.to(`convo:${id}`).emit(RT.conversationUpdated, { conversationId: id })
+    return reply.code(200).send(await summarizeConversation(id, me))
   })
 
   app.put('/conversations/:id/mute', async (req, reply) => {
@@ -157,13 +190,24 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     })
     if (current?.lastReadMessageId) {
       const cur = await prisma.message.findUnique({ where: { id: current.lastReadMessageId } })
-      if (cur && cur.createdAt > msg.createdAt) return reply.code(204).send()
+      const curIsNewer =
+        cur &&
+        (cur.createdAt > msg.createdAt ||
+          (cur.createdAt.getTime() === msg.createdAt.getTime() && cur.id > msg.id))
+      if (curIsNewer) {
+        return reply.code(200).send({ conversationId: id, lastReadMessageId: cur.id })
+      }
     }
     await prisma.readState.upsert({
       where: { userId_conversationId: { userId: me, conversationId: id } },
       create: { userId: me, conversationId: id, lastReadMessageId: msg.id },
       update: { lastReadMessageId: msg.id },
     })
-    return reply.code(204).send()
+    app.io.to(`convo:${id}`).emit(RT.readAdvanced, {
+      conversationId: id,
+      userId: me,
+      lastReadMessageId: msg.id,
+    })
+    return reply.code(200).send({ conversationId: id, lastReadMessageId: msg.id })
   })
 }
