@@ -23,19 +23,28 @@ export async function summarizeConversation(conversationId: string, meId: string
   const read = await prisma.readState.findUnique({
     where: { userId_conversationId: { userId: meId, conversationId } },
   })
-  let lastReadAt: Date | null = null
+  let lastRead: { createdAt: Date; id: string } | null = null
   if (read?.lastReadMessageId) {
     const lr = await prisma.message.findUnique({ where: { id: read.lastReadMessageId } })
-    lastReadAt = lr?.createdAt ?? null
+    if (lr) lastRead = { createdAt: lr.createdAt, id: lr.id }
   }
   const meMember = convo.members.find((m) => m.userId === meId)
-  const baseline = lastReadAt ?? meMember?.joinedAt ?? null
+  // 기준선: 읽음 커서 > (없으면) 합류 시점. 커서 비교는 페이지네이션과 같은 (createdAt, id) 순서.
   const unreadCount = await prisma.message.count({
     where: {
       conversationId,
       deletedAt: null,
       authorId: { not: meId },
-      ...(baseline ? { createdAt: { gt: baseline } } : {}),
+      ...(lastRead
+        ? {
+            OR: [
+              { createdAt: { gt: lastRead.createdAt } },
+              { createdAt: lastRead.createdAt, id: { gt: lastRead.id } },
+            ],
+          }
+        : meMember
+          ? { createdAt: { gt: meMember.joinedAt } }
+          : {}),
     },
   })
   const others = convo.members.filter((m) => m.userId !== meId)

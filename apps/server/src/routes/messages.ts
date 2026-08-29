@@ -116,6 +116,7 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
+    if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
     const parsed = z.object({ emoji: z.string().min(1).max(32) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     await prisma.reaction.upsert({
@@ -127,7 +128,10 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       create: { messageId: id, userId: req.currentUser.id, emoji: parsed.data.emoji },
       update: {},
     })
-    return reply.code(204).send()
+    const updated = await prisma.message.findUniqueOrThrow({
+      where: { id }, include: messageInclude,
+    })
+    return reply.code(200).send(toMessageDto(updated))
   })
 
   app.delete('/messages/:id/reactions/:emoji', async (req, reply) => {
@@ -137,22 +141,30 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     await prisma.reaction.deleteMany({
       where: { messageId: id, userId: req.currentUser.id, emoji },
     })
-    return reply.code(204).send()
+    const updated = await prisma.message.findUniqueOrThrow({
+      where: { id }, include: messageInclude,
+    })
+    return reply.code(200).send(toMessageDto(updated))
   })
 
   app.put('/messages/:id/pin', async (req, reply) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
-    await prisma.message.update({ where: { id }, data: { pinnedAt: new Date() } })
-    return reply.code(204).send()
+    if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
+    const updated = await prisma.message.update({
+      where: { id }, data: { pinnedAt: new Date() }, include: messageInclude,
+    })
+    return reply.code(200).send(toMessageDto(updated))
   })
 
   app.delete('/messages/:id/pin', async (req, reply) => {
     const { id } = req.params as { id: string }
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
-    await prisma.message.update({ where: { id }, data: { pinnedAt: null } })
-    return reply.code(204).send()
+    const updated = await prisma.message.update({
+      where: { id }, data: { pinnedAt: null }, include: messageInclude,
+    })
+    return reply.code(200).send(toMessageDto(updated))
   })
 }

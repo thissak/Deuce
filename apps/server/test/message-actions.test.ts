@@ -70,7 +70,7 @@ describe('message actions', () => {
         method: 'PUT', url: `/api/messages/${t.msgId}/reactions`, headers: { cookie: t.bCookie },
         payload: { emoji: '👍' },
       })
-      expect(res.statusCode).toBe(204)
+      expect(res.statusCode).toBe(200)
     }
     const list = await t.app.inject({
       method: 'GET', url: `/api/conversations/${t.convoId}/messages`, headers: { cookie: t.aCookie },
@@ -84,7 +84,7 @@ describe('message actions', () => {
       url: `/api/messages/${t.msgId}/reactions/${encodeURIComponent('👍')}`,
       headers: { cookie: t.bCookie },
     })
-    expect(remove.statusCode).toBe(204)
+    expect(remove.statusCode).toBe(200)
   })
 
   it('pins a message and exposes it on conversation detail', async () => {
@@ -92,7 +92,9 @@ describe('message actions', () => {
     const pin = await t.app.inject({
       method: 'PUT', url: `/api/messages/${t.msgId}/pin`, headers: { cookie: t.bCookie },
     })
-    expect(pin.statusCode).toBe(204)
+    expect(pin.statusCode).toBe(200)
+    const pinnedDto = MessageDtoSchema.parse(pin.json())
+    expect(pinnedDto.pinnedAt).not.toBeNull()
     const detail = await t.app.inject({
       method: 'GET', url: `/api/conversations/${t.convoId}`, headers: { cookie: t.aCookie },
     })
@@ -103,7 +105,7 @@ describe('message actions', () => {
     const unpin = await t.app.inject({
       method: 'DELETE', url: `/api/messages/${t.msgId}/pin`, headers: { cookie: t.aCookie },
     })
-    expect(unpin.statusCode).toBe(204)
+    expect(unpin.statusCode).toBe(200)
     const after = await t.app.inject({
       method: 'GET', url: `/api/conversations/${t.convoId}`, headers: { cookie: t.aCookie },
     })

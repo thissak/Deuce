@@ -122,6 +122,20 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(204).send()
   })
 
+  app.delete('/conversations/:id/members/:userId', async (req, reply) => {
+    const { id, userId } = req.params as { id: string; userId: string }
+    const me = req.currentUser.id
+    if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
+    const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
+    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (!(await isMember(id, userId))) return reply.code(404).send({ error: 'member not found' })
+    // ReadState는 남긴다 — 재가입 시 부재 기간 메시지를 안 읽음으로 보이게 하는 의도된 정책
+    await prisma.conversationMember.delete({
+      where: { conversationId_userId: { conversationId: id, userId } },
+    })
+    return reply.code(200).send(await summarizeConversation(id, me))
+  })
+
   app.put('/conversations/:id/mute', async (req, reply) => {
     const { id } = req.params as { id: string }
     const me = req.currentUser.id
@@ -157,13 +171,19 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     })
     if (current?.lastReadMessageId) {
       const cur = await prisma.message.findUnique({ where: { id: current.lastReadMessageId } })
-      if (cur && cur.createdAt > msg.createdAt) return reply.code(204).send()
+      const curIsNewer =
+        cur &&
+        (cur.createdAt > msg.createdAt ||
+          (cur.createdAt.getTime() === msg.createdAt.getTime() && cur.id > msg.id))
+      if (curIsNewer) {
+        return reply.code(200).send({ conversationId: id, lastReadMessageId: cur.id })
+      }
     }
     await prisma.readState.upsert({
       where: { userId_conversationId: { userId: me, conversationId: id } },
       create: { userId: me, conversationId: id, lastReadMessageId: msg.id },
       update: { lastReadMessageId: msg.id },
     })
-    return reply.code(204).send()
+    return reply.code(200).send({ conversationId: id, lastReadMessageId: msg.id })
   })
 }
