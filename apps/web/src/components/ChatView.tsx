@@ -1,13 +1,16 @@
-import type { UserDto } from '@deuce/shared'
+import type { MessageDto, UserDto } from '@deuce/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api/http'
 import { conversationDetailQuery } from '../api/queries'
+import { Composer } from './Composer'
+import { Timeline } from './Timeline'
 
 export function ChatView({ me, conversationId }: { me: UserDto; conversationId: string }) {
   const detail = useQuery(conversationDetailQuery(conversationId))
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
+  const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
 
   if (detail.error instanceof ApiError && detail.error.status === 403) {
     return (
@@ -34,7 +37,16 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
         <div className="header-actions">{/* T9: 음소거·그룹 설정 */}</div>
       </header>
       {tab === 'chat' ? (
-        <div className="timeline">{/* T6: Timeline + Composer */}</div>
+        <>
+          <Timeline me={me} conversationId={conversationId} members={c.members} onReply={setReplyTo} />
+          <Composer
+            me={me}
+            conversationId={conversationId}
+            members={c.members}
+            replyTo={replyTo}
+            onClearReply={() => setReplyTo(null)}
+          />
+        </>
       ) : (
         <div className="shared-list">{/* T8: SharedTab */}</div>
       )}
