@@ -1,6 +1,9 @@
 import type { MessageDto, MessagePage } from '@deuce/shared'
-import { act, renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChatView } from '../src/components/ChatView'
 import { useJumpToMessage } from '../src/lib/useJumpToMessage'
 
 function message(id: string): MessageDto {
@@ -97,5 +100,67 @@ describe('useJumpToMessage 완료 통지', () => {
 
     expect(q.fetchNextPage).not.toHaveBeenCalled()
     expect(onDone).toHaveBeenCalledTimes(1)
+  })
+})
+
+// 훅 계약이 아니라 실제 화면 배선(ChatView의 setParams)을 통과시킨다
+describe('ChatView 점프 파라미터 정리', () => {
+  const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
+  const detail = {
+    id: 'c1', type: 'GROUP', title: '팀방', displayName: '팀방', members: [me],
+    lastMessage: null, unreadCount: 0, mutedAt: null, pinnedMessage: null,
+  }
+
+  function stubFetch(page: MessagePage) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+        const body =
+          init?.method === 'PUT' ? { ok: true } : path.includes('/messages') ? page : detail
+        return Promise.resolve(
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        )
+      }),
+    )
+  }
+
+  function Probe() {
+    return <span data-testid="search">{useLocation().search}</span>
+  }
+
+  function renderChat(entry: string) {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[entry]}>
+          <ChatView me={me} conversationId="c1" />
+          <Probe />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('점프가 끝나면 URL에서 ?m=을 지운다', async () => {
+    stubFetch({ items: [message('m1')], nextCursor: null })
+    renderChat('/chat/c1?m=m1')
+    expect(screen.getByTestId('search').textContent).toBe('?m=m1')
+
+    await screen.findByText('본문')
+
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''))
+    expect(scrollIntoView).toHaveBeenCalled()
+  })
+
+  it('대상을 못 찾고 멈출 때도 ?m=을 남기지 않는다', async () => {
+    stubFetch({ items: [message('other')], nextCursor: null })
+    renderChat('/chat/c1?m=zzz')
+
+    await screen.findByText('본문')
+
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''))
+    expect(scrollIntoView).not.toHaveBeenCalled()
   })
 })
