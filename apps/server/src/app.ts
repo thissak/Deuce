@@ -4,6 +4,8 @@ import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
 import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
 import { authPlugin } from './plugins/auth.js'
+import { userRoutes } from './routes/users.js'
+import { conversationRoutes } from './routes/conversations.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -35,6 +37,9 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   app.get('/health', async () => ({ status: 'ok' }))
   const exchange = opts.exchangeGoogleCode ?? createGoogleCodeExchanger(config)
   await app.register(authRoutes, { config, exchange })
+
+  await app.register(userRoutes, { prefix: '/api' })
+  await app.register(conversationRoutes, { prefix: '/api' })
 
   return app
 }
