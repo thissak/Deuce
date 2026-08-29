@@ -53,15 +53,25 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const q = ListQuerySchema.safeParse(req.query)
     if (!q.success) return reply.code(400).send({ error: 'invalid query' })
-    let cursorDate: Date | null = null
+    let cursor: { createdAt: Date; id: string } | null = null
     if (q.data.cursor) {
       const c = await prisma.message.findUnique({ where: { id: q.data.cursor } })
       if (!c || c.conversationId !== id) return reply.code(400).send({ error: 'invalid cursor' })
-      cursorDate = c.createdAt
+      cursor = { createdAt: c.createdAt, id: c.id }
     }
     const items = await prisma.message.findMany({
-      where: { conversationId: id, ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}) },
-      orderBy: { createdAt: 'desc' },
+      where: {
+        conversationId: id,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: cursor.createdAt } },
+                { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: q.data.limit,
       include: messageInclude,
     })

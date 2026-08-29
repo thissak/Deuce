@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MessageDtoSchema, type UserDto } from '@deuce/shared'
 import { makeTestApp, type TestApp } from './api-helpers.js'
-import { resetDb } from './helpers.js'
+import { resetDb, testDb } from './helpers.js'
 
 interface Ctx extends TestApp {
   aCookie: string
@@ -101,6 +101,41 @@ describe('messages api', () => {
     })
     const p2 = page2.json() as { items: Array<{ body: string }>; nextCursor: string | null }
     expect(p2.items.map((m) => m.body)).toEqual(['하나'])
+    expect(p2.nextCursor).toBeNull()
+  })
+
+  it('paginates without skipping or duplicating when createdAt ties', async () => {
+    const { app, aCookie, convoId } = await setupDm()
+    const users = (
+      await app.inject({ method: 'GET', url: '/api/users', headers: { cookie: aCookie } })
+    ).json() as UserDto[]
+    const a = users.find((u) => u.email === 'a@goldenlabs.dev')!
+    const sameTime = new Date('2026-08-29T00:00:00.000Z')
+    await testDb.message.createMany({
+      data: ['하나', '둘', '셋'].map((body) => ({
+        conversationId: convoId,
+        authorId: a.id,
+        body,
+        createdAt: sameTime,
+      })),
+    })
+
+    const page1 = await app.inject({
+      method: 'GET', url: `/api/conversations/${convoId}/messages?limit=2`, headers: { cookie: aCookie },
+    })
+    const p1 = page1.json() as { items: Array<{ id: string }>; nextCursor: string | null }
+    expect(p1.items).toHaveLength(2)
+
+    const page2 = await app.inject({
+      method: 'GET',
+      url: `/api/conversations/${convoId}/messages?limit=2&cursor=${p1.nextCursor}`,
+      headers: { cookie: aCookie },
+    })
+    const p2 = page2.json() as { items: Array<{ id: string }>; nextCursor: string | null }
+
+    const allIds = [...p1.items.map((m) => m.id), ...p2.items.map((m) => m.id)]
+    expect(new Set(allIds).size).toBe(3)
+    expect(allIds).toHaveLength(3)
     expect(p2.nextCursor).toBeNull()
   })
 })
