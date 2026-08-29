@@ -13,3 +13,22 @@
 
 - [feat] `Deuce` 프로젝트 초기화 — Microsoft Teams와 같은 기능 범위의 팀 커뮤니케이션·협업 프로그램을 위한 control repo와 문서 SSOT 생성
 - [chore] GOLEM 카탈로그 등록 및 골든노트 연결 활성화 — 프로젝트 위치와 상태 문서의 중앙 탐색 경로 마련
+
+- [feat] 서버 파운데이션 모노레포 부트스트랩 — pnpm workspace(`apps/server`,
+  `packages/shared`), Fastify 5 ESM(NodeNext) 서버 스켈레톤, 공통
+  tsconfig 베이스
+- [feat] Prisma 스키마 — v1 채팅 도메인(User·Conversation·Message·
+  Attachment·Reaction·ReadState·Mention) 모델링과 초기 마이그레이션,
+  로컬 개발/테스트용 Postgres 16 docker-compose
+- [feat] 세션·Google OAuth 인증 — `@fastify/secure-session` 쿠키 세션,
+  Google 로그인 콜백(허용 이메일 목록 기반 접근 제어), `/auth/me`·
+  `/auth/logout`
+- [chore] Prisma·`@prisma/client` 6.19.3 정확 고정 — npm latest는
+  prerelease(8.0.0-rc)이고 Prisma 7은 기존 `datasource url = env(...)`
+  Migrate 설정 방식을 깨뜨려(어댑터·`prisma.config.ts` 필요) 6.x에 머문다.
+  사유는 `docs/adr/003-prisma-6-pin.md` 참고
+- [fix] 최종 리뷰 수정 웨이브 — `email_verified` 미검증(Critical), 콜백
+  예외 메시지 노출, oauthState 재생 공격, 보안 계약(§8) 테스트 공백,
+  서버 부팅 경로의 암묵적 env 로딩 등 Critical 1건·Important 5건·
+  Minor 4건 수정. 상세는
+  `.superpowers/sdd/2026-08-29-server-foundation/fix-wave-report.md`

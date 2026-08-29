@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: deuce
+      POSTGRES_PASSWORD: deuce
+      POSTGRES_DB: deuce
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deuce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  pgdata:
