@@ -4,6 +4,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../src/App'
 
+// jsdom에서 SocketProvider가 localhost로 실제 폴링을 시도하므로 트랜스포트를 막는다
+vi.mock('socket.io-client', () => ({
+  io: () => ({ connect: vi.fn(), disconnect: vi.fn(), on: vi.fn(), off: vi.fn(), emit: vi.fn() }),
+}))
+
 function renderApp(): void {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
