@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { isMember, summarizeConversation } from '../domain/conversations.js'
+import { messageInclude, toMessageDto } from '../serializers.js'
 
 const CreateSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('dm'), otherUserId: z.string() }),
@@ -64,6 +65,19 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       (b.lastMessage?.createdAt ?? '').localeCompare(a.lastMessage?.createdAt ?? ''),
     )
     return summaries
+  })
+
+  app.get('/conversations/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const me = req.currentUser.id
+    if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
+    const pinned = await prisma.message.findFirst({
+      where: { conversationId: id, pinnedAt: { not: null }, deletedAt: null },
+      orderBy: { pinnedAt: 'desc' },
+      include: messageInclude,
+    })
+    const summary = await summarizeConversation(id, me)
+    return { ...summary, pinnedMessage: pinned ? toMessageDto(pinned) : null }
   })
 
   app.patch('/conversations/:id', async (req, reply) => {

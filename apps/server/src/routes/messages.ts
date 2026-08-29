@@ -15,6 +15,12 @@ const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 })
 
+async function memberMessage(messageId: string, userId: string) {
+  const msg = await prisma.message.findUnique({ where: { id: messageId } })
+  if (!msg) return null
+  return (await isMember(msg.conversationId, userId)) ? msg : null
+}
+
 export const messageRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate)
 
@@ -79,5 +85,74 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       items: items.map(toMessageDto),
       nextCursor: items.length === q.data.limit ? items[items.length - 1]!.id : null,
     }
+  })
+
+  app.patch('/messages/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    if (msg.authorId !== req.currentUser.id) return reply.code(403).send({ error: 'author only' })
+    if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
+    const parsed = z.object({ body: z.string().min(1).max(4000) }).safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
+    const updated = await prisma.message.update({
+      where: { id },
+      data: { body: parsed.data.body, editedAt: new Date() },
+      include: messageInclude,
+    })
+    return reply.code(200).send(toMessageDto(updated))
+  })
+
+  app.delete('/messages/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    if (msg.authorId !== req.currentUser.id) return reply.code(403).send({ error: 'author only' })
+    await prisma.message.update({ where: { id }, data: { deletedAt: new Date() } })
+    return reply.code(204).send()
+  })
+
+  app.put('/messages/:id/reactions', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    const parsed = z.object({ emoji: z.string().min(1).max(32) }).safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
+    await prisma.reaction.upsert({
+      where: {
+        messageId_userId_emoji: {
+          messageId: id, userId: req.currentUser.id, emoji: parsed.data.emoji,
+        },
+      },
+      create: { messageId: id, userId: req.currentUser.id, emoji: parsed.data.emoji },
+      update: {},
+    })
+    return reply.code(204).send()
+  })
+
+  app.delete('/messages/:id/reactions/:emoji', async (req, reply) => {
+    const { id, emoji } = req.params as { id: string; emoji: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    await prisma.reaction.deleteMany({
+      where: { messageId: id, userId: req.currentUser.id, emoji },
+    })
+    return reply.code(204).send()
+  })
+
+  app.put('/messages/:id/pin', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    await prisma.message.update({ where: { id }, data: { pinnedAt: new Date() } })
+    return reply.code(204).send()
+  })
+
+  app.delete('/messages/:id/pin', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const msg = await memberMessage(id, req.currentUser.id)
+    if (!msg) return reply.code(404).send({ error: 'message not found' })
+    await prisma.message.update({ where: { id }, data: { pinnedAt: null } })
+    return reply.code(204).send()
   })
 }
