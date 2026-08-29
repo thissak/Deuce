@@ -6,6 +6,7 @@ import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/goog
 import { authPlugin } from './plugins/auth.js'
 import { userRoutes } from './routes/users.js'
 import { conversationRoutes } from './routes/conversations.js'
+import { messageRoutes } from './routes/messages.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -40,6 +41,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
 
   await app.register(userRoutes, { prefix: '/api' })
   await app.register(conversationRoutes, { prefix: '/api' })
+  await app.register(messageRoutes, { prefix: '/api' })
 
   return app
 }
