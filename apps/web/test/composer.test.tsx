@@ -6,13 +6,14 @@ import { Composer } from '../src/components/Composer'
 import { msg } from './cache.test'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
+const mate = { id: 'u2', email: 'b@example.com', name: '김철수', avatarUrl: null }
 
-function renderComposer(fetchImpl: typeof fetch) {
+function renderComposer(fetchImpl: typeof fetch, members = [me]) {
   vi.stubGlobal('fetch', fetchImpl)
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
   render(
     <QueryClientProvider client={qc}>
-      <Composer me={me} conversationId="c1" members={[me]} replyTo={null} onClearReply={() => {}} />
+      <Composer me={me} conversationId="c1" members={members} replyTo={null} onClearReply={() => {}} />
     </QueryClientProvider>,
   )
 }
@@ -65,5 +66,46 @@ describe('Composer', () => {
     })
     expect(fn).not.toHaveBeenCalled()
     expect((box as HTMLTextAreaElement).value).toBe('안녕하세')
+  })
+})
+
+describe('Composer 멘션', () => {
+  it('@ 뒤 입력에 맞는 후보를 보여주고 고르면 이름을 채운다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    const box = screen.getByRole('textbox')
+    await userEvent.type(box, '@김')
+    await userEvent.click(screen.getByRole('button', { name: /김철수/ }))
+    expect((box as HTMLTextAreaElement).value).toBe('@김철수 ')
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('팝업이 열려 있으면 Enter는 전송 대신 첫 후보를 고른다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    const box = screen.getByRole('textbox')
+    await userEvent.type(box, '@김{Enter}')
+    await act(async () => {})
+    expect(fn).not.toHaveBeenCalled()
+    expect((box as HTMLTextAreaElement).value).toBe('@김철수 ')
+  })
+
+  it('전송할 때 본문에 남은 멘션의 id를 함께 보낸다', async () => {
+    const fn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(msg({ id: 'new1', conversationId: 'c1' })), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    const box = screen.getByRole('textbox')
+    await userEvent.type(box, '@김{Enter}확인 부탁드립니다{Enter}')
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    const body = JSON.parse((fn.mock.calls[0]?.[1] as RequestInit).body as string) as {
+      body: string
+      mentions: string[]
+    }
+    expect(body.body).toBe('@김철수 확인 부탁드립니다')
+    expect(body.mentions).toEqual(['u2'])
   })
 })

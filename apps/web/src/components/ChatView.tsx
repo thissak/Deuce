@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api/http'
 import { conversationDetailQuery } from '../api/queries'
+import { truncate } from '../lib/format'
 import { Composer } from './Composer'
 import { Timeline } from './Timeline'
 
@@ -36,6 +37,14 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
         </div>
         <div className="header-actions">{/* T9: 음소거·그룹 설정 */}</div>
       </header>
+      {c.pinnedMessage && tab === 'chat' && (
+        <button
+          className="pin-banner"
+          onClick={() => document.getElementById(`msg-${c.pinnedMessage!.id}`)?.scrollIntoView({ block: 'center' })}
+        >
+          📌 {c.pinnedMessage.deleted ? '삭제된 메시지입니다' : truncate(c.pinnedMessage.body, 80)}
+        </button>
+      )}
       {tab === 'chat' ? (
         <>
           <Timeline me={me} conversationId={conversationId} members={c.members} onReply={setReplyTo} />

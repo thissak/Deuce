@@ -72,7 +72,14 @@ export function Timeline({
         </button>
       )}
       {messages.map((m) => (
-        <MessageBubble key={m.id} m={m} isMine={m.author.id === me.id} memberNames={memberNames} onReply={onReply} />
+        <MessageBubble
+          key={m.id}
+          m={m}
+          isMine={m.author.id === me.id}
+          meId={me.id}
+          memberNames={memberNames}
+          onReply={onReply}
+        />
       ))}
     </div>
   )
