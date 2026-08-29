@@ -6,6 +6,7 @@ import { ApiError } from '../api/http'
 import { conversationDetailQuery } from '../api/queries'
 import { truncate } from '../lib/format'
 import { Composer } from './Composer'
+import { SharedTab } from './SharedTab'
 import { Timeline } from './Timeline'
 
 export function ChatView({ me, conversationId }: { me: UserDto; conversationId: string }) {
@@ -57,7 +58,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           />
         </>
       ) : (
-        <div className="shared-list">{/* T8: SharedTab */}</div>
+        <SharedTab conversationId={conversationId} />
       )}
     </section>
   )

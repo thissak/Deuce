@@ -1,10 +1,13 @@
 import { MessageDtoSchema, type MessageDto, type UserDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { apiJson } from '../api/http'
-import { messagesKey } from '../api/queries'
+import { ApiError, apiJson } from '../api/http'
+import { messagesKey, sharedKey } from '../api/queries'
+import { formatBytes } from '../lib/format'
 import { collectMentionIds, mentionQueryAt } from '../lib/mentions'
 import { appendMessage, type MessagesData } from '../realtime/cache'
+
+const MAX_FILE_BYTES = 26214400 // 서버 MAX_UPLOAD_BYTES 기본값과 동일 (25MiB)
 
 export function Composer({
   me,
@@ -23,6 +26,8 @@ export function Composer({
   const [text, setText] = useState('')
   const boxRef = useRef<HTMLTextAreaElement>(null)
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const candidates = mention
     ? members.filter((u) => u.id !== me.id && u.name.toLowerCase().startsWith(mention.query.toLowerCase()))
     : []
@@ -57,9 +62,47 @@ export function Composer({
     },
   })
 
+  const pickFile = (f: File | null) => {
+    if (f && f.size > MAX_FILE_BYTES) {
+      setFileError('파일이 너무 큽니다 (최대 25MB).')
+      setFile(null)
+      return
+    }
+    setFileError(null)
+    setFile(f)
+  }
+
+  // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약)
+  const upload = useMutation({
+    mutationFn: async (f: File) => {
+      const fd = new FormData()
+      fd.append('file', f)
+      fd.append('body', text)
+      const res = await fetch(`/api/conversations/${conversationId}/attachments`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: fd,
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new ApiError(res.status, body.error ?? res.statusText)
+      }
+      return MessageDtoSchema.parse(await res.json())
+    },
+    onSuccess: (m) => {
+      qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => appendMessage(d, m))
+      void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
+      setText('')
+      setFile(null)
+    },
+  })
+
+  const pending = send.isPending || upload.isPending
+
   const submit = () => {
-    if (text.trim().length === 0 || send.isPending) return
-    send.mutate()
+    if (pending) return
+    if (file) upload.mutate(file) // 파일이 있으면 캡션은 비어도 된다
+    else if (text.trim().length > 0) send.mutate()
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -72,7 +115,18 @@ export function Composer({
 
   return (
     <div className="composer">
-      {send.isError && <div className="composer-error">전송에 실패했습니다. 다시 시도해 주세요.</div>}
+      {fileError && <div className="composer-error">{fileError}</div>}
+      {(send.isError || upload.isError) && (
+        <div className="composer-error">전송에 실패했습니다. 다시 시도해 주세요.</div>
+      )}
+      {file && (
+        <div className="file-chip">
+          📎 {file.name} <span className="size">({formatBytes(file.size)})</span>
+          <button className="chip-close" onClick={() => setFile(null)}>
+            ✕
+          </button>
+        </div>
+      )}
       {replyTo && (
         <div className="reply-chip">
           <span className="quote-author">{replyTo.author.name}에게 답장</span>
@@ -83,6 +137,19 @@ export function Composer({
         </div>
       )}
       <div className="composer-row">
+        <label className="icon-btn" title="파일 첨부">
+          📎
+          <input
+            data-testid="file-input"
+            type="file"
+            hidden
+            disabled={upload.isPending} // 전송 중 새로 고른 파일이 onSuccess의 초기화로 사라지지 않게
+            onChange={(e) => {
+              pickFile(e.target.files?.[0] ?? null)
+              e.target.value = '' // 같은 파일을 다시 골라도 change가 나도록
+            }}
+          />
+        </label>
         <div className="composer-anchor">
           <textarea
             ref={boxRef}
@@ -115,7 +182,7 @@ export function Composer({
             </div>
           )}
         </div>
-        <button className="send-btn" onClick={submit} disabled={text.trim().length === 0 || send.isPending}>
+        <button className="send-btn" onClick={submit} disabled={(!file && text.trim().length === 0) || pending}>
           보내기
         </button>
       </div>

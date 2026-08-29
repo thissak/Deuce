@@ -17,6 +17,7 @@ export const conversationsKey = ['conversations'] as const
 export const conversationKey = (id: string) => ['conversation', id] as const
 export const messagesKey = (conversationId: string) => ['messages', conversationId] as const
 export const presenceKey = ['presence'] as const
+export const sharedKey = (conversationId: string) => ['shared', conversationId] as const
 
 export const meQuery = queryOptions({
   queryKey: ['me'] as const,
@@ -81,6 +82,6 @@ export const searchQuery = (q: string) =>
 
 export const sharedFilesQuery = (id: string) =>
   queryOptions({
-    queryKey: ['shared', id] as const,
+    queryKey: sharedKey(id),
     queryFn: async () => z.array(SharedFileSchema).parse(await api(`/api/conversations/${id}/attachments`)),
   })

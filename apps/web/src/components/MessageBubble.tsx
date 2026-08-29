@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, ApiError, apiJson } from '../api/http'
 import { messagesKey } from '../api/queries'
-import { formatTime } from '../lib/format'
+import { formatBytes, formatTime } from '../lib/format'
 import { hasMyReaction, REACTION_EMOJIS } from '../lib/messages'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
@@ -144,6 +144,15 @@ export function MessageBubble({
             </div>
           )}
         </div>
+        {!m.deleted && m.attachments.length > 0 && (
+          <div>
+            {m.attachments.map((a) => (
+              <a key={a.id} className="attachment" href={`/api/attachments/${a.id}`}>
+                📎 {a.fileName} <span className="size">{formatBytes(a.size)}</span>
+              </a>
+            ))}
+          </div>
+        )}
         {!m.deleted && m.reactions.length > 0 && (
           <div className="reactions">
             {m.reactions.map((r) => (
