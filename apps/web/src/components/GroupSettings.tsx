@@ -24,11 +24,17 @@ export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: Co
     onSuccess: refresh,
   })
   const addMember = useMutation({
-    mutationFn: (userId: string) => apiJson('POST', `/api/conversations/${detail.id}/members`, { userIds: [userId] }),
+    mutationFn: (userId: string) =>
+      apiJson('POST', `/api/conversations/${detail.id}/members`, { userIds: [userId] }).then((r) =>
+        ConversationSummarySchema.parse(r),
+      ),
     onSuccess: refresh,
   })
   const removeMember = useMutation({
-    mutationFn: (userId: string) => api(`/api/conversations/${detail.id}/members/${userId}`, { method: 'DELETE' }),
+    mutationFn: (userId: string) =>
+      api(`/api/conversations/${detail.id}/members/${userId}`, { method: 'DELETE' }).then((r) =>
+        ConversationSummarySchema.parse(r),
+      ),
     onSuccess: refresh,
   })
   const leave = useMutation({
