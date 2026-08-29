@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import secureSession from '@fastify/secure-session'
+import multipart from '@fastify/multipart'
 import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
 import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
@@ -10,6 +11,8 @@ import { messageRoutes } from './routes/messages.js'
 import { searchRoutes } from './routes/search.js'
 import { activityRoutes } from './routes/activity.js'
 import { presenceRoutes } from './routes/presence.js'
+import { attachmentRoutes } from './routes/attachments.js'
+import { LocalDiskStorage } from './storage.js'
 import { setupRealtime } from './realtime/io.js'
 
 export interface AppOptions {
@@ -37,6 +40,10 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
 
   await app.register(authPlugin, { config })
 
+  await app.register(multipart, {
+    limits: { fileSize: config.maxUploadBytes, files: 1 },
+  })
+
   app.setErrorHandler((err: unknown, req, reply) => {
     const error = err instanceof Error ? err : new Error(String(err))
     const status = (err as any)?.statusCode ?? 500
@@ -54,6 +61,10 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(messageRoutes, { prefix: '/api' })
   await app.register(searchRoutes, { prefix: '/api' })
   await app.register(activityRoutes, { prefix: '/api' })
+  await app.register(attachmentRoutes, {
+    prefix: '/api',
+    storage: new LocalDiskStorage(config.uploadDir),
+  })
 
   setupRealtime(app, config)
   await app.register(presenceRoutes, { prefix: '/api' })

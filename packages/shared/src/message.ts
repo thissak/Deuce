@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { UserDtoSchema } from './user.js'
+import { AttachmentDtoSchema } from './attachment.js'
 
 export const MessageDtoSchema = z.object({
   id: z.string(),
@@ -12,6 +13,7 @@ export const MessageDtoSchema = z.object({
     .nullable(),
   reactions: z.array(z.object({ emoji: z.string(), userIds: z.array(z.string()) })),
   mentions: z.array(z.string()),
+  attachments: z.array(AttachmentDtoSchema),
   createdAt: z.string(),
   editedAt: z.string().nullable(),
   pinnedAt: z.string().nullable(),

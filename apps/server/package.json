@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@deuce/shared": "workspace:*",
+    "@fastify/multipart": "^10.1.1",
     "@fastify/secure-session": "^8.3.0",
     "@prisma/client": "6.19.3",
     "cookie": "^2.0.1",

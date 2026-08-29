@@ -11,6 +11,8 @@ const EnvSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().url(),
   ALLOWED_EMAILS: z.string().min(1),
   NODE_ENV: z.string().default('development'),
+  UPLOAD_DIR: z.string().default('./uploads'),
+  MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(26214400),
 })
 
 export interface AppConfig {
@@ -19,6 +21,8 @@ export interface AppConfig {
   google: { clientId: string; clientSecret: string; callbackUrl: string }
   allowedEmails: string[]
   isProd: boolean
+  uploadDir: string
+  maxUploadBytes: number
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -35,5 +39,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .map((e) => e.trim().toLowerCase())
       .filter(Boolean),
     isProd: parsed.NODE_ENV === 'production',
+    uploadDir: parsed.UPLOAD_DIR,
+    maxUploadBytes: parsed.MAX_UPLOAD_BYTES,
   }
 }

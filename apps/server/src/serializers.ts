@@ -10,6 +10,7 @@ export const messageInclude = {
   replyTo: { include: { author: true } },
   reactions: true,
   mentions: true,
+  attachments: true,
 } as const
 
 type MessageWithRels = Prisma.MessageGetPayload<{ include: typeof messageInclude }>
@@ -33,6 +34,9 @@ export function toMessageDto(m: MessageWithRels): MessageDto {
       : null,
     reactions: [...grouped.entries()].map(([emoji, userIds]) => ({ emoji, userIds })),
     mentions: m.mentions.map((x) => x.mentionedUserId),
+    attachments: m.attachments.map((a) => ({
+      id: a.id, fileName: a.fileName, size: a.size, contentType: a.contentType,
+    })),
     createdAt: m.createdAt.toISOString(),
     editedAt: m.editedAt?.toISOString() ?? null,
     pinnedAt: m.pinnedAt?.toISOString() ?? null,
