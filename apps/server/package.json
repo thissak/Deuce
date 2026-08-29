@@ -5,13 +5,17 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:test": "DATABASE_URL=postgresql://deuce:deuce@localhost:5434/deuce_test prisma migrate deploy"
   },
   "dependencies": {
+    "@prisma/client": "6.19.3",
     "fastify": "^5.12.1"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
+    "prisma": "6.19.3",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

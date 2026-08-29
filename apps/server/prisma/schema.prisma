@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  memberships ConversationMember[]
+  messages    Message[]
+  reactions   Reaction[]
+  readStates  ReadState[]
+  mentions    Mention[]
+}
+
+// CHANNEL은 v2 팀/채널 확장용 예약값 — v1에서는 DM·GROUP만 생성한다
+enum ConversationType {
+  DM
+  GROUP
+  CHANNEL
+}
+
+model Conversation {
+  id         String           @id @default(uuid())
+  type       ConversationType
+  title      String?          // DM은 null, 그룹은 방 이름
+  embedKey   String?          @unique // 임베드 모듈용, 계획 ⑥에서 사용
+  createdAt  DateTime         @default(now())
+  members    ConversationMember[]
+  messages   Message[]
+  readStates ReadState[]
+}
+
+model ConversationMember {
+  conversationId String
+  userId         String
+  joinedAt       DateTime  @default(now())
+  mutedAt        DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String    @id @default(uuid())
+  conversationId String
+  authorId       String
+  body           String
+  replyToId      String?   // 평면 인용 (스레드 아님)
+  createdAt      DateTime  @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime? // 소프트 삭제
+  pinnedAt       DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author         User         @relation(fields: [authorId], references: [id])
+  replyTo        Message?     @relation("Quote", fields: [replyToId], references: [id])
+  quotedBy       Message[]    @relation("Quote")
+  attachments    Attachment[]
+  reactions      Reaction[]
+  mentions       Mention[]
+
+  @@index([conversationId, createdAt])
+}
+
+model Attachment {
+  id          String @id @default(uuid())
+  messageId   String
+  objectKey   String // GCS 오브젝트 키
+  fileName    String
+  size        Int
+  contentType String
+  message     Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model Reaction {
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+}
+
+model ReadState {
+  userId            String
+  conversationId    String
+  lastReadMessageId String?
+  updatedAt         DateTime @updatedAt
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+}
+
+model Mention {
+  id              String   @id @default(uuid())
+  messageId       String
+  mentionedUserId String
+  createdAt       DateTime @default(now())
+  message         Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mentioned       User    @relation(fields: [mentionedUserId], references: [id], onDelete: Cascade)
+
+  @@index([mentionedUserId, createdAt])
+}
