@@ -14,7 +14,9 @@ import { z } from 'zod'
 import { api, ApiError } from './http'
 
 export const conversationsKey = ['conversations'] as const
+export const conversationKey = (id: string) => ['conversation', id] as const
 export const messagesKey = (conversationId: string) => ['messages', conversationId] as const
+export const presenceKey = ['presence'] as const
 
 export const meQuery = queryOptions({
   queryKey: ['me'] as const,
@@ -42,7 +44,7 @@ export const conversationsQuery = queryOptions({
 
 export const conversationDetailQuery = (id: string) =>
   queryOptions({
-    queryKey: ['conversation', id] as const,
+    queryKey: conversationKey(id),
     queryFn: async () => ConversationDetailSchema.parse(await api(`/api/conversations/${id}`)),
     retry: false, // 403(멤버 아님)을 즉시 드러낸다 — 이월: 403/404 비대칭 처리
   })
@@ -61,7 +63,7 @@ export const messagesQuery = (id: string) =>
   })
 
 export const presenceQuery = queryOptions({
-  queryKey: ['presence'] as const,
+  queryKey: presenceKey,
   queryFn: async () => PresenceSnapshotSchema.parse(await api('/api/presence')),
 })
 

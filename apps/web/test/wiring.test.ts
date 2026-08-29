@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { RT } from '@deuce/shared'
 import { describe, expect, it, vi } from 'vitest'
-import { conversationsKey, messagesKey } from '../src/api/queries'
+import { conversationsKey, messagesKey, presenceKey } from '../src/api/queries'
 import type { MessagesData } from '../src/realtime/cache'
 import type { AppSocket } from '../src/realtime/socket'
 import { attachRealtime } from '../src/realtime/wiring'
@@ -43,6 +43,16 @@ describe('attachRealtime', () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: conversationsKey })
   })
 
+  it('message.updated → 항목 교체 + 목록 invalidate (미리보기 본문 반영)', () => {
+    const { qc, socket } = setup()
+    seedMessages(qc, 'c1', [msg({ id: 'm1', conversationId: 'c1', body: '이전' })])
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    socket.fire(RT.messageUpdated, msg({ id: 'm1', conversationId: 'c1', body: '이후' }))
+    const d = qc.getQueryData<MessagesData>(messagesKey('c1'))
+    expect(d?.pages[0]?.items[0]?.body).toBe('이후')
+    expect(spy).toHaveBeenCalledWith({ queryKey: conversationsKey })
+  })
+
   it('reaction.changed → 항목 교체', () => {
     const { qc, socket } = setup()
     seedMessages(qc, 'c1', [msg({ id: 'm1', conversationId: 'c1' })])
@@ -78,8 +88,15 @@ describe('attachRealtime', () => {
 
   it('presence.changed → 스냅샷 패치', () => {
     const { qc, socket } = setup()
+    qc.setQueryData(presenceKey, {})
     socket.fire(RT.presenceChanged, { userId: 'u7', status: 'away' })
-    expect(qc.getQueryData(['presence'])).toEqual({ u7: 'away' })
+    expect(qc.getQueryData(presenceKey)).toEqual({ u7: 'away' })
+  })
+
+  it('presence.changed는 스냅샷을 아직 못 받았으면 캐시를 만들지 않는다', () => {
+    const { qc, socket } = setup()
+    socket.fire(RT.presenceChanged, { userId: 'u7', status: 'away' })
+    expect(qc.getQueryData(presenceKey)).toBeUndefined()
   })
 
   it('connect → 전체 invalidate (초기 룸 조인 비동기 + 재접속 재동기화)', () => {

@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { RT, RTC, type MessageDto, type PresenceSnapshot } from '@deuce/shared'
-import { conversationsKey, messagesKey } from '../api/queries'
+import { conversationKey, conversationsKey, messagesKey, presenceKey } from '../api/queries'
 import { appendMessage, patchPresence, replaceMessage, type MessagesData } from './cache'
 import type { AppSocket } from './socket'
 
@@ -21,11 +21,13 @@ export function attachRealtime(
   socket.on(RT.messageUpdated, (m) => {
     replace(m)
     // 고정/고정 해제도 이 이벤트로 온다 — 상세(고정 배너) 갱신
-    void qc.invalidateQueries({ queryKey: ['conversation', m.conversationId] })
+    void qc.invalidateQueries({ queryKey: conversationKey(m.conversationId) })
+    // 마지막 메시지를 수정하면 목록 미리보기(lastMessage.body)도 바뀐다
+    void qc.invalidateQueries({ queryKey: conversationsKey })
   })
   socket.on(RT.messageDeleted, (m) => {
     replace(m)
-    void qc.invalidateQueries({ queryKey: ['conversation', m.conversationId] })
+    void qc.invalidateQueries({ queryKey: conversationKey(m.conversationId) })
     void qc.invalidateQueries({ queryKey: conversationsKey })
   })
   socket.on(RT.reactionChanged, replace)
@@ -39,15 +41,18 @@ export function attachRealtime(
   })
   socket.on(RT.conversationUpdated, (p) => {
     void qc.invalidateQueries({ queryKey: conversationsKey })
-    void qc.invalidateQueries({ queryKey: ['conversation', p.conversationId] })
+    void qc.invalidateQueries({ queryKey: conversationKey(p.conversationId) })
   })
   socket.on(RT.conversationRemoved, (p) => {
     void qc.invalidateQueries({ queryKey: conversationsKey })
     qc.removeQueries({ queryKey: messagesKey(p.conversationId) })
-    qc.removeQueries({ queryKey: ['conversation', p.conversationId] })
+    qc.removeQueries({ queryKey: conversationKey(p.conversationId) })
   })
   socket.on(RT.presenceChanged, (p) => {
-    qc.setQueryData<PresenceSnapshot>(['presence'], (map) => patchPresence(map, p))
+    // 스냅샷을 아직 못 받았으면 패치하지 않는다 — 한 명짜리 캐시가 생기면
+    // presenceQuery가 그걸 완전한 스냅샷으로 오해한다
+    if (qc.getQueryData(presenceKey) === undefined) return
+    qc.setQueryData<PresenceSnapshot>(presenceKey, (map) => patchPresence(map, p))
   })
   socket.on('connect', () => {
     // 룸 조인이 비동기라 접속 직후 이벤트 공백 가능 + 재접속 시 놓친 이벤트 — 전체 재동기화 (스펙 §5)
