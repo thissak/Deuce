@@ -1,5 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# allowBuilds permits esbuild's postinstall script to run (required for vitest's bundler).
+# This is the canonical pnpm 11 mechanism for managing build script permissions.
 allowBuilds:
   esbuild: true
