@@ -87,6 +87,7 @@ a { color: #5b5fc7; text-decoration: none; }
 /* 컴포저 */
 .composer { border-top: 1px solid #e0e0e0; padding: 10px 16px; }
 .composer-error { color: #c4314b; font-size: 12px; margin-bottom: 6px; }
+.composer-hint { color: #888; font-size: 12px; margin-bottom: 6px; }
 .reply-chip, .file-chip { display: flex; align-items: center; gap: 8px; background: #f0f0f5; border-radius: 4px; padding: 6px 10px; margin-bottom: 6px; font-size: 13px; }
 .reply-chip .quote-author { flex: none; }
 .chip-close { margin-left: auto; border: none; background: none; color: #888; }

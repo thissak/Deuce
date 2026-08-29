@@ -1,4 +1,4 @@
-import type { SharedFile } from '@deuce/shared'
+import type { MessageDto, SharedFile } from '@deuce/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -11,12 +11,21 @@ import { msg } from './cache.test'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
 
-function renderComposer(fetchImpl: unknown) {
+function renderComposer(
+  fetchImpl: unknown,
+  opts: { replyTo?: MessageDto | null; onClearReply?: () => void } = {},
+) {
   vi.stubGlobal('fetch', fetchImpl)
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
   render(
     <QueryClientProvider client={qc}>
-      <Composer me={me} conversationId="c1" members={[me]} replyTo={null} onClearReply={() => {}} />
+      <Composer
+        me={me}
+        conversationId="c1"
+        members={[me]}
+        replyTo={opts.replyTo ?? null}
+        onClearReply={opts.onClearReply ?? (() => {})}
+      />
     </QueryClientProvider>,
   )
   return qc
@@ -68,6 +77,16 @@ describe('첨부 업로드', () => {
     expect((fn.mock.calls[0]![1] as RequestInit & { body: FormData }).body.get('body')).toBe('')
     expect(spy).toHaveBeenCalledWith({ queryKey: sharedKey('c1') })
     await waitFor(() => expect(screen.queryByText(/a\.txt/)).toBeNull())
+  })
+
+  it('답장 상태에서 첨부를 보내면 답장을 해제한다', async () => {
+    const fn = created({ id: 'up3' })
+    const onClearReply = vi.fn()
+    renderComposer(fn, { replyTo: msg({ id: 'r1' }), onClearReply })
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt'))
+    await userEvent.click(screen.getByText('보내기'))
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    await waitFor(() => expect(onClearReply).toHaveBeenCalled())
   })
 
   it('칩의 ✕로 고른 파일을 뺀다', async () => {

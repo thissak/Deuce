@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ApiError } from './api/http'
+import { meQuery } from './api/queries'
 import { App } from './App'
 import './styles.css'
 
@@ -11,7 +12,7 @@ const queryClient = new QueryClient({
     onError: (error) => {
       // 어떤 /api 호출이든 401이면 세션 만료 — 로그인 화면으로 (허용목록 매 요청 재검사 대응)
       if (error instanceof ApiError && error.status === 401) {
-        queryClient.setQueryData(['me'], null)
+        queryClient.setQueryData(meQuery.queryKey, null)
       }
     },
   }),

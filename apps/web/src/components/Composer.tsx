@@ -94,6 +94,7 @@ export function Composer({
       void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
       setText('')
       setFile(null)
+      onClearReply()
     },
   })
 
@@ -127,6 +128,7 @@ export function Composer({
           </button>
         </div>
       )}
+      {file && replyTo && <div className="composer-hint">첨부에는 답장이 포함되지 않습니다.</div>}
       {replyTo && (
         <div className="reply-chip">
           <span className="quote-author">{replyTo.author.name}에게 답장</span>
