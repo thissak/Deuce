@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, stat } from 'node:fs/promises'
+import { mkdir, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import type { Readable } from 'node:stream'
@@ -7,6 +7,7 @@ import type { Readable } from 'node:stream'
 export interface FileStorage {
   save(objectKey: string, stream: Readable): Promise<{ size: number }>
   createReadStream(objectKey: string): Promise<Readable>
+  delete(objectKey: string): Promise<void>
 }
 
 const KEY_PATTERN = /^[0-9a-f-]{36}(\.[A-Za-z0-9]{1,10})?$/
@@ -30,5 +31,10 @@ export class LocalDiskStorage implements FileStorage {
   async createReadStream(objectKey: string): Promise<Readable> {
     assertSafeKey(objectKey)
     return createReadStream(join(this.baseDir, objectKey))
+  }
+
+  async delete(objectKey: string): Promise<void> {
+    assertSafeKey(objectKey)
+    await rm(join(this.baseDir, objectKey), { force: true })
   }
 }

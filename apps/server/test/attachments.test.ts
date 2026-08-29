@@ -1,3 +1,5 @@
+import { readdir, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { MessageDtoSchema, SharedFileSchema, type UserDto } from '@deuce/shared'
@@ -95,5 +97,12 @@ describe('attachments', () => {
       method: 'POST', headers: { cookie: c.aCookie }, body: bigFd,
     })
     expect(tooBig.status).toBe(413)
+
+    const uploadDir = process.env.UPLOAD_DIR!
+    const entries = await readdir(uploadDir)
+    for (const entry of entries) {
+      const info = await stat(join(uploadDir, entry))
+      expect(info.size).toBeLessThan(26214400)
+    }
   })
 })

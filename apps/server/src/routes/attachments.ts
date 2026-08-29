@@ -24,8 +24,19 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
     const caption =
       captionField && 'value' in captionField ? String(captionField.value).slice(0, 4000) : ''
     const objectKey = `${randomUUID()}${extname(data.filename).slice(0, 11)}`
-    const { size } = await deps.storage.save(objectKey, data.file)
+    let size: number
+    try {
+      size = (await deps.storage.save(objectKey, data.file)).size
+    } catch (err) {
+      await deps.storage.delete(objectKey).catch((delErr: unknown) => {
+        req.log.warn({ err: delErr, objectKey }, 'failed to remove partial upload after save error')
+      })
+      throw err
+    }
     if (data.file.truncated) {
+      await deps.storage.delete(objectKey).catch((delErr: unknown) => {
+        req.log.warn({ err: delErr, objectKey }, 'failed to remove truncated upload')
+      })
       return reply.code(413).send({ error: 'file too large' })
     }
     const created = await prisma.message.create({
