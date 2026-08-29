@@ -2,15 +2,12 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import secureSession from '@fastify/secure-session'
 import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
+import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
 
 export interface AppOptions {
   config?: AppConfig
   // Task 4에서 사용: 테스트가 구글 코드 교환을 페이크로 대체한다
-  exchangeGoogleCode?: (code: string) => Promise<{
-    email: string
-    name: string
-    avatarUrl: string | null
-  }>
+  exchangeGoogleCode?: GoogleCodeExchanger
 }
 
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
@@ -23,7 +20,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
-  await app.register(authRoutes, { config })
+  const exchange = opts.exchangeGoogleCode ?? createGoogleCodeExchanger(config)
+  await app.register(authRoutes, { config, exchange })
 
   return app
 }

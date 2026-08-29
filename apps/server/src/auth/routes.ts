@@ -1,13 +1,43 @@
+import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import type { AppConfig } from '../config.js'
 import { prisma } from '../db.js'
-import '../auth/session.js'
+import { createAuthUrl, type GoogleCodeExchanger } from './google.js'
+import './session.js'
 
 export interface AuthDeps {
   config: AppConfig
+  exchange: GoogleCodeExchanger
 }
 
 export async function authRoutes(app: FastifyInstance, deps: AuthDeps): Promise<void> {
+  const { config, exchange } = deps
+
+  app.get('/auth/google', async (req, reply) => {
+    const state = randomBytes(16).toString('hex')
+    req.session.set('oauthState', state)
+    return reply.redirect(createAuthUrl(config, state))
+  })
+
+  app.get('/auth/google/callback', async (req, reply) => {
+    const { code, state } = req.query as { code?: string; state?: string }
+    if (!code || !state || state !== req.session.get('oauthState')) {
+      return reply.code(400).send({ error: 'invalid oauth state' })
+    }
+    const profile = await exchange(code)
+    const email = profile.email.toLowerCase()
+    if (!config.allowedEmails.includes(email)) {
+      return reply.code(403).send({ error: 'not allowed' })
+    }
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: { email, name: profile.name, avatarUrl: profile.avatarUrl },
+      update: { name: profile.name, avatarUrl: profile.avatarUrl },
+    })
+    req.session.set('userId', user.id)
+    return reply.redirect('/')
+  })
+
   app.get('/auth/me', async (req, reply) => {
     const userId = req.session.get('userId')
     if (!userId) return reply.code(401).send({ error: 'unauthorized' })
