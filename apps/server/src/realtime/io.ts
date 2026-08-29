@@ -1,7 +1,7 @@
 import { Server } from 'socket.io'
 import { parseCookie } from 'cookie'
 import type { FastifyInstance } from 'fastify'
-import { RT } from '@deuce/shared'
+import { RT, RTC, type ClientToServerEvents, type ServerToClientEvents } from '@deuce/shared'
 import type { AppConfig } from '../config.js'
 import { prisma } from '../db.js'
 import { PresenceTracker } from './presence.js'
@@ -9,13 +9,13 @@ import '../auth/session.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    io: Server
+    io: Server<ClientToServerEvents, ServerToClientEvents>
     presence: PresenceTracker
   }
 }
 
 export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
-  const io = new Server(app.server, { serveClient: false })
+  const io = new Server<ClientToServerEvents, ServerToClientEvents>(app.server, { serveClient: false })
   const presence = new PresenceTracker()
 
   io.use(async (socket, next) => {
@@ -32,7 +32,8 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
       }
       socket.data.userId = user.id
       return next()
-    } catch {
+    } catch (err) {
+      app.log.debug({ err }, 'socket handshake rejected')
       return next(new Error('unauthorized'))
     }
   })
@@ -46,11 +47,11 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
     const onlineChange = presence.connect(userId)
     if (onlineChange) io.emit(RT.presenceChanged, { userId, status: onlineChange })
 
-    socket.on('presence:away', () => {
+    socket.on(RTC.presenceAway, () => {
       const change = presence.setAway(userId)
       if (change) io.emit(RT.presenceChanged, { userId, status: change })
     })
-    socket.on('presence:active', () => {
+    socket.on(RTC.presenceActive, () => {
       const change = presence.setActive(userId)
       if (change) io.emit(RT.presenceChanged, { userId, status: change })
     })

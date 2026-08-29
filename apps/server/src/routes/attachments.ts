@@ -20,10 +20,9 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const data = await req.file()
     if (!data) return reply.code(400).send({ error: 'file required' })
-    const captionField = data.fields['body']
-    const caption =
-      captionField && 'value' in captionField ? String(captionField.value).slice(0, 4000) : ''
-    const objectKey = `${randomUUID()}${extname(data.filename).slice(0, 11)}`
+    const rawExt = extname(data.filename)
+    const ext = /^\.[A-Za-z0-9]{1,10}$/.test(rawExt) ? rawExt : ''
+    const objectKey = `${randomUUID()}${ext}`
     let size: number
     try {
       size = (await deps.storage.save(objectKey, data.file)).size
@@ -39,6 +38,12 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
       })
       return reply.code(413).send({ error: 'file too large' })
     }
+    // @fastify/multipart only populates `fields` with parts parsed so far;
+    // the 'body' field can arrive after the file part, so it must be read
+    // only after the file stream is fully consumed above.
+    const captionField = data.fields['body']
+    const caption =
+      captionField && 'value' in captionField ? String(captionField.value).slice(0, 4000) : ''
     const created = await prisma.message.create({
       data: {
         conversationId: id,
@@ -75,6 +80,8 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
     }
     const stream = await deps.storage.createReadStream(attachment.objectKey)
     reply.header('content-type', attachment.contentType)
+    reply.header('content-length', attachment.size)
+    reply.header('x-content-type-options', 'nosniff')
     reply.header(
       'content-disposition',
       `attachment; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,

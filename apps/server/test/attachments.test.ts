@@ -42,7 +42,9 @@ describe('attachments', () => {
 
   it('uploads a file as a message and lets members download it', async () => {
     const c = await setup()
-    const bytes = new TextEncoder().encode('첨부 파일 내용입니다')
+    // 300KB: above @fastify/multipart's part-parsing buffer, so the 'body'
+    // field arrives after the file part (regression coverage for I-1).
+    const bytes = new Uint8Array(300 * 1024).fill(65)
     const fd = new FormData()
     fd.append('file', new Blob([bytes], { type: 'text/plain' }), '메모.txt')
     fd.append('body', '파일 공유합니다')
@@ -62,8 +64,11 @@ describe('attachments', () => {
       headers: { cookie: c.bCookie },
     })
     expect(down.status).toBe(200)
-    expect(await down.text()).toBe('첨부 파일 내용입니다')
+    const downloaded = new Uint8Array(await down.arrayBuffer())
+    expect(downloaded).toEqual(bytes)
     expect(down.headers.get('content-type')).toContain('text/plain')
+    expect(down.headers.get('content-length')).toBe(String(bytes.byteLength))
+    expect(down.headers.get('x-content-type-options')).toBe('nosniff')
 
     const list = await c.app.inject({
       method: 'GET', url: `/api/conversations/${c.convoId}/attachments`,
@@ -72,6 +77,25 @@ describe('attachments', () => {
     const files = (list.json() as unknown[]).map((x) => SharedFileSchema.parse(x))
     expect(files).toHaveLength(1)
     expect(files[0]!.fileName).toBe('메모.txt')
+  })
+
+  it('sanitizes non-alphanumeric filename extensions instead of 500ing', async () => {
+    const c = await setup()
+    const fd = new FormData()
+    fd.append('file', new Blob(['hello'], { type: 'image/jpeg' }), 'photo.jpg (1)')
+
+    const up = await fetch(`http://127.0.0.1:${c.port}/api/conversations/${c.convoId}/attachments`, {
+      method: 'POST', headers: { cookie: c.aCookie }, body: fd,
+    })
+    expect(up.status).toBe(201)
+    const dto = MessageDtoSchema.parse(await up.json())
+    expect(dto.attachments[0]).toMatchObject({ fileName: 'photo.jpg (1)' })
+
+    const down = await fetch(`http://127.0.0.1:${c.port}/api/attachments/${dto.attachments[0]!.id}`, {
+      headers: { cookie: c.aCookie },
+    })
+    expect(down.status).toBe(200)
+    expect(await down.text()).toBe('hello')
   })
 
   it('hides attachments from non-members and respects the size limit', async () => {

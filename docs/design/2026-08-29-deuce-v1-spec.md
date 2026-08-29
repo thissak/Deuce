@@ -99,7 +99,7 @@ deuce/
 | Conversation | `type: dm \| group`, title, embed_key | type에 `channel` 예약 — v2 확장 시 스키마 불변 |
 | ConversationMember | conversation_id, user_id, muted_at | |
 | Message | body, `reply_to_id`(self FK), edited_at, deleted_at, pinned_at | 평면 인용, 소프트 삭제 |
-| Attachment | message_id, GCS 오브젝트 키, 파일명, 크기 | |
+| Attachment | message_id, 스토리지 오브젝트 키, 파일명, 크기 | |
 | Reaction | message_id, user_id, emoji | |
 | ReadState | (user_id, conversation_id) → last_read_message_id | 읽음 커서 |
 | Mention | message_id, mentioned_user_id | 활동 피드·알림 원천 |

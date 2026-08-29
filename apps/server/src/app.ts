@@ -23,7 +23,12 @@ export interface AppOptions {
 
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
   const config = opts.config ?? loadConfig()
-  const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
+  const app = Fastify({
+    logger: process.env.NODE_ENV !== 'test',
+    // 테스트에서 keep-alive 소켓이 idle로 표시되기 직전에 app.close()가 호출되면
+    // 레이스로 종료가 멈출 수 있다 (Fastify 기본값 'idle'은 idle 소켓만 정리).
+    forceCloseConnections: process.env.NODE_ENV === 'test' ? true : 'idle',
+  })
 
   await app.register(secureSession, {
     key: config.sessionKey,
