@@ -19,7 +19,12 @@ function scrollToMessage(id: string): void {
   setTimeout(() => el.classList.remove('highlight'), 2000)
 }
 
-export function useJumpToMessage(q: JumpSource): (messageId: string) => void {
+/**
+ * 점프 요청 setter를 돌려준다. 스크롤을 실행했거나 더 못 찾아 멈출 때 `onDone`을 부른다.
+ * 호출자는 여기서 `?m=`을 지워, 같은 메시지로 다시 점프하거나 탭을 오갈 때
+ * 남은 파라미터가 재점프를 일으키지 않게 한다.
+ */
+export function useJumpToMessage(q: JumpSource, onDone?: () => void): (messageId: string) => void {
   const [target, setTarget] = useState<string | null>(null)
 
   useEffect(() => {
@@ -28,12 +33,14 @@ export function useJumpToMessage(q: JumpSource): (messageId: string) => void {
     if (loaded) {
       requestAnimationFrame(() => scrollToMessage(target))
       setTarget(null)
+      onDone?.()
     } else if (q.hasNextPage && (q.data?.pages.length ?? 0) < MAX_PAGES) {
       void q.fetchNextPage()
     } else if (q.data) {
       setTarget(null) // 더 못 찾음 — 조용히 중단
+      onDone?.()
     }
-  }, [target, q])
+  }, [target, q, onDone])
 
   return setTarget
 }

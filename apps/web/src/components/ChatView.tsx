@@ -81,6 +81,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
             members={c.members}
             onReply={setReplyTo}
             jumpToId={jumpToId}
+            onJumpDone={() => setParams({}, { replace: true })}
           />
           <Composer
             me={me}

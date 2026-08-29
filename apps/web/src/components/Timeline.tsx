@@ -32,12 +32,14 @@ export function Timeline({
   members,
   onReply,
   jumpToId,
+  onJumpDone,
 }: {
   me: UserDto
   conversationId: string
   members: UserDto[]
   onReply: (m: MessageDto) => void
   jumpToId?: string | null
+  onJumpDone?: () => void
 }) {
   const q = useInfiniteQuery(messagesQuery(conversationId))
   const listRef = useRef<HTMLDivElement>(null)
@@ -48,7 +50,7 @@ export function Timeline({
   const newest = messages[messages.length - 1]
   useAdvanceRead(conversationId, newest?.id)
 
-  const jump = useJumpToMessage(q)
+  const jump = useJumpToMessage(q, onJumpDone)
   useEffect(() => {
     if (!jumpToId) return
     atBottomRef.current = false // 점프 중에는 하단 자동 추종을 끈다
