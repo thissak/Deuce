@@ -1,4 +1,4 @@
-import { OAuth2Client } from 'google-auth-library'
+import { OAuth2Client, type TokenPayload } from 'google-auth-library'
 import type { AppConfig } from '../config.js'
 
 export interface GoogleProfile {
@@ -24,6 +24,16 @@ export function createAuthUrl(config: AppConfig, state: string): string {
   })
 }
 
+export function profileFromIdTokenPayload(payload: TokenPayload | undefined): GoogleProfile {
+  if (!payload?.email) throw new Error('구글 프로필에 이메일이 없습니다')
+  if (payload.email_verified !== true) throw new Error('구글 이메일이 인증되지 않았습니다')
+  return {
+    email: payload.email,
+    name: payload.name ?? payload.email,
+    avatarUrl: payload.picture ?? null,
+  }
+}
+
 export function createGoogleCodeExchanger(config: AppConfig): GoogleCodeExchanger {
   return async (code) => {
     const client = newClient(config)
@@ -33,12 +43,6 @@ export function createGoogleCodeExchanger(config: AppConfig): GoogleCodeExchange
       idToken: tokens.id_token,
       audience: config.google.clientId,
     })
-    const payload = ticket.getPayload()
-    if (!payload?.email) throw new Error('구글 프로필에 이메일이 없습니다')
-    return {
-      email: payload.email,
-      name: payload.name ?? payload.email,
-      avatarUrl: payload.picture ?? null,
-    }
+    return profileFromIdTokenPayload(ticket.getPayload())
   }
 }

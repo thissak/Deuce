@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(4000),
+  // PrismaClient가 process.env.DATABASE_URL을 직접 읽으므로 AppConfig로 넘기지 않는다.
+  // 여기 남겨두는 이유는 값이 없을 때 부팅을 즉시 실패시키기 위해서다.
   DATABASE_URL: z.string().min(1),
   SESSION_KEY_HEX: z.string().regex(/^[0-9a-f]{64}$/),
   GOOGLE_CLIENT_ID: z.string().min(1),
@@ -13,7 +15,6 @@ const EnvSchema = z.object({
 
 export interface AppConfig {
   port: number
-  databaseUrl: string
   sessionKey: Buffer
   google: { clientId: string; clientSecret: string; callbackUrl: string }
   allowedEmails: string[]
@@ -24,7 +25,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = EnvSchema.parse(env)
   return {
     port: parsed.PORT,
-    databaseUrl: parsed.DATABASE_URL,
     sessionKey: Buffer.from(parsed.SESSION_KEY_HEX, 'hex'),
     google: {
       clientId: parsed.GOOGLE_CLIENT_ID,

@@ -24,7 +24,16 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps): Promise<
     if (!code || !state || state !== req.session.get('oauthState')) {
       return reply.code(400).send({ error: 'invalid oauth state' })
     }
-    const profile = await exchange(code)
+    // state는 1회용 — 검증에 성공한 즉시 소거해 재생 공격을 막는다
+    req.session.set('oauthState', undefined)
+
+    let profile
+    try {
+      profile = await exchange(code)
+    } catch (err) {
+      req.log.error(err)
+      return reply.code(401).send({ error: 'login failed' })
+    }
     const email = profile.email.toLowerCase()
     if (!config.allowedEmails.includes(email)) {
       return reply.code(403).send({ error: 'not allowed' })
