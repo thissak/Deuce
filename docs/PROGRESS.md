@@ -25,5 +25,12 @@ lifecycle: active
 
 ## 현재 우선순위
 
-- [ ] v1 스펙 기반 구현 계획 수립 (writing-plans)
-- [ ] 모노레포 부트스트랩과 구현 착수
+- [x] v1 스펙 기반 구현 계획 수립 (writing-plans)
+- [x] 서버 파운데이션(계획 ①) 구현 완료 — pnpm 모노레포, Fastify 서버
+  스켈레톤, Prisma 스키마·마이그레이션, 세션·Google OAuth 인증, 리뷰
+  수정 웨이브(보안·문서·부팅 검증) 반영
+- [ ] 계획 ② 대화·메시지 REST + 검색
+- [ ] 계획 ③ Socket.IO 실시간·프레즌스·파일
+- [ ] 계획 ④ 웹 SPA
+- [ ] 계획 ⑤ Electron 셸
+- [ ] 계획 ⑥ 임베드 + 배포
