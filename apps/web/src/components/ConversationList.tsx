@@ -6,6 +6,7 @@ import { conversationsQuery } from '../api/queries'
 import { filterConversations, previewText, type ConvoFilter } from '../lib/conversations'
 import { formatTime } from '../lib/format'
 import { NewChatDialog } from './NewChatDialog'
+import { PresenceDot } from './PresenceDot'
 
 export function ConversationList({ me, activeId }: { me: UserDto; activeId?: string }) {
   const navigate = useNavigate()
@@ -25,13 +26,18 @@ export function ConversationList({ me, activeId }: { me: UserDto; activeId?: str
         <button className={`chip ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')}>읽지 않음</button>
       </div>
       <ul className="convo-list">
-        {shown.map((c) => (
+        {shown.map((c) => {
+          const other = c.type === 'DM' ? c.members.find((u) => u.id !== me.id) : undefined
+          return (
           <li key={c.id}>
             <button
               className={`convo-item ${c.id === activeId ? 'active' : ''} ${c.unreadCount > 0 ? 'unread' : ''}`}
               onClick={() => navigate(`/chat/${c.id}`)}
             >
-              <span className="avatar">{c.displayName.slice(0, 1)}</span>
+              <span className="avatar-wrap">
+                <span className="avatar">{c.displayName.slice(0, 1)}</span>
+                {other && <PresenceDot userId={other.id} />}
+              </span>
               <span className="convo-body">
                 <span className="convo-title">
                   <span>{c.displayName}</span>
@@ -43,7 +49,8 @@ export function ConversationList({ me, activeId }: { me: UserDto; activeId?: str
               {c.unreadCount > 0 && <span className="badge">{c.unreadCount}</span>}
             </button>
           </li>
-        ))}
+          )
+        })}
       </ul>
       {showNew && (
         <NewChatDialog
