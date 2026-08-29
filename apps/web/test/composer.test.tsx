@@ -49,6 +49,8 @@ describe('Composer', () => {
     const fn = vi.fn()
     renderComposer(fn as unknown as typeof fetch)
     await userEvent.type(screen.getByRole('textbox'), '줄1{Shift>}{Enter}{/Shift}줄2')
+    // 전송이 샜다면 mutationFn 마이크로태스크가 여기서 실행된다 — 뒤따르는 타이핑에 기대지 않는다
+    await act(async () => {})
     expect(fn).not.toHaveBeenCalled()
   })
 
