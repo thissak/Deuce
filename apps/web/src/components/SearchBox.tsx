@@ -3,6 +3,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchQuery } from '../api/queries'
 import { formatTime, truncate } from '../lib/format'
+import { ErrorNotice } from './ErrorNotice'
 
 export function SearchBox() {
   const navigate = useNavigate()
@@ -30,7 +31,13 @@ export function SearchBox() {
       />
       {submitted.length >= 2 && (
         <ul className="search-results">
-          {results.data?.length === 0 && <li className="result-row">결과가 없습니다.</li>}
+          {results.isPending && <li className="result-row">검색 중…</li>}
+          {results.isError && (
+            <li>
+              <ErrorNotice message="검색에 실패했습니다." onRetry={() => void results.refetch()} />
+            </li>
+          )}
+          {results.isSuccess && results.data.length === 0 && <li className="result-row">결과가 없습니다.</li>}
           {results.data?.map((r) => (
             <li key={r.messageId}>
               <button

@@ -27,4 +27,13 @@ describe('collectMentionIds', () => {
     expect(collectMentionIds('@김철수 @이영희', members)).toEqual(['u1', 'u2'])
     expect(collectMentionIds('멘션 없음', members)).toEqual([])
   })
+
+  it('접두가 겹치는 이름은 긴 이름을 정확히 매칭한다', () => {
+    const members = [
+      { id: 'u1', email: 'a@x.com', name: '김철', avatarUrl: null },
+      { id: 'u2', email: 'b@x.com', name: '김철수', avatarUrl: null },
+    ]
+    expect(collectMentionIds('@김철수 확인요', members)).toEqual(['u2'])
+    expect(collectMentionIds('@김철 @김철수', members).sort()).toEqual(['u1', 'u2'])
+  })
 })

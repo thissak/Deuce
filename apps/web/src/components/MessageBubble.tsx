@@ -2,11 +2,12 @@ import { MessageDtoSchema, type MessageDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, ApiError, apiJson } from '../api/http'
-import { messagesKey } from '../api/queries'
+import { conversationKey, messagesKey } from '../api/queries'
 import { formatBytes, formatTime } from '../lib/format'
 import { hasMyReaction, REACTION_EMOJIS } from '../lib/messages'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
+import { ErrorNotice } from './ErrorNotice'
 
 /** 액션 응답(MessageDto)을 캐시에 반영. 404면 사라진 메시지 — 타임라인 재조회(이월: 404 비대칭) */
 function useMessageAction(conversationId: string) {
@@ -19,7 +20,8 @@ function useMessageAction(conversationId: string) {
           : await apiJson(req.method, req.path, req.body)
       return raw === undefined ? null : MessageDtoSchema.parse(raw)
     },
-    onSuccess: (m) => {
+    onSuccess: (m, req) => {
+      if (req.path.endsWith('/pin')) void qc.invalidateQueries({ queryKey: conversationKey(conversationId) }) // 고정 배너 즉시 갱신
       if (m) qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => replaceMessage(d, m))
       else void qc.invalidateQueries({ queryKey: messagesKey(conversationId) }) // DELETE 204 — 소켓이 마스킹 DTO를 보내주지만 안전망
     },
@@ -45,6 +47,7 @@ export function MessageBubble({
   onReply: (m: MessageDto) => void
 }) {
   const action = useMessageAction(m.conversationId)
+  const actionFailed = action.isError && !(action.error instanceof ApiError && action.error.status === 404)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -95,7 +98,7 @@ export function MessageBubble({
           ) : editing ? (
             <div>
               <textarea value={draft} maxLength={4000} onChange={(e) => setDraft(e.target.value)} rows={2} />
-              {action.isError && <div className="composer-error">수정에 실패했습니다. 다시 시도해 주세요.</div>}
+              {action.isError && <ErrorNotice message="수정에 실패했습니다. 다시 시도해 주세요." />}
               <div className="dialog-actions">
                 <button className="btn-plain" onClick={() => setEditing(false)}>
                   취소
@@ -143,6 +146,7 @@ export function MessageBubble({
                 ))}
             </div>
           )}
+          {actionFailed && !editing && <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />}
         </div>
         {!m.deleted && m.attachments.length > 0 && (
           <div>

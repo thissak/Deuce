@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { apiJson } from '../api/http'
 import { conversationsKey, messagesQuery } from '../api/queries'
 import { useJumpToMessage } from '../lib/useJumpToMessage'
+import { ErrorNotice } from './ErrorNotice'
 import { MessageBubble } from './MessageBubble'
 
 /** 최신 메시지가 보이는 상태(탭 표시 중)일 때만 읽음 커서를 전진시킨다. 서버가 후퇴를 막아주므로 낙관 전송. */
@@ -78,6 +79,7 @@ export function Timeline({
 
   return (
     <div className="timeline" ref={listRef} onScroll={onScroll}>
+      {q.isError && <ErrorNotice message="메시지를 불러오지 못했습니다." onRetry={() => void q.refetch()} />}
       {q.hasNextPage && (
         <button className="load-older" onClick={() => void loadOlder()} disabled={q.isFetchingNextPage}>
           이전 메시지 보기

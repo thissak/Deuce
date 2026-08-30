@@ -32,14 +32,14 @@ export function SocketProvider({ meId, children }: { meId: string; children: Rea
   })
   const [socket] = useState(createSocket)
   useEffect(() => {
-    attachRealtime(socket, qc, meId, (m) =>
+    const detachRealtime = attachRealtime(socket, qc, meId, (m) =>
       maybeNotify(qc, meId, m, (id) => navigateRef.current(`/chat/${id}`)),
     )
     const detachSignals = attachPresenceSignals(socket)
     socket.connect()
     return () => {
       detachSignals()
-      socket.off()
+      detachRealtime() // socket.off() 전체 해제 대신 붙인 것만 뗀다
       socket.disconnect()
     }
   }, [socket, qc, meId])

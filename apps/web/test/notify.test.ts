@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { conversationsKey } from '../src/api/queries'
 import { maybeNotify } from '../src/lib/notify'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 class FakeNotification {
   static permission = 'granted'
@@ -64,5 +64,20 @@ describe('maybeNotify', () => {
     FakeNotification.permission = 'default'
     maybeNotify(qc, 'me1', msg({}), () => {})
     expect(FakeNotification.instances).toHaveLength(0)
+  })
+
+  it('삭제 메시지는 알림하지 않는다', () => {
+    maybeNotify(qc, 'me1', msg({ deleted: true }), () => {})
+    expect(FakeNotification.instances).toHaveLength(0)
+  })
+
+  it('알림 클릭 시 창 포커스 + 해당 방을 연다', () => {
+    const onOpen = vi.fn()
+    const focus = vi.spyOn(window, 'focus').mockImplementation(() => {})
+    maybeNotify(qc, 'me1', msg({ conversationId: 'c7' }), onOpen)
+    FakeNotification.instances[0]?.onclick?.()
+    expect(focus).toHaveBeenCalled()
+    expect(onOpen).toHaveBeenCalledWith('c7')
+    focus.mockRestore()
   })
 })

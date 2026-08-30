@@ -6,6 +6,7 @@ import { api, ApiError } from '../api/http'
 import { conversationDetailQuery, conversationKey, conversationsKey } from '../api/queries'
 import { truncate } from '../lib/format'
 import { Composer } from './Composer'
+import { ErrorNotice } from './ErrorNotice'
 import { GroupSettings } from './GroupSettings'
 import { PresenceDot } from './PresenceDot'
 import { SharedTab } from './SharedTab'
@@ -34,6 +35,15 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
         <div className="chat-error">
           <p>이 대화방에 접근할 수 없습니다.</p>
           <Link to="/chat">채팅 목록으로 돌아가기</Link>
+        </div>
+      </section>
+    )
+  }
+  if (detail.isError && !detail.data) {
+    return (
+      <section className="chat-view">
+        <div className="chat-error">
+          <ErrorNotice message="대화 정보를 불러오지 못했습니다." onRetry={() => void detail.refetch()} />
         </div>
       </section>
     )
@@ -68,6 +78,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           )}
         </div>
       </header>
+      {mute.isError && <ErrorNotice message="음소거 설정에 실패했습니다. 다시 시도해 주세요." />}
       {c.pinnedMessage && tab === 'chat' && (
         <button className="pin-banner" onClick={() => setParams({ m: c.pinnedMessage!.id })}>
           📌 {c.pinnedMessage.deleted ? '삭제된 메시지입니다' : truncate(c.pinnedMessage.body, 80)}

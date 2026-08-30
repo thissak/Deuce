@@ -4,11 +4,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, apiJson } from '../api/http'
 import { conversationKey, conversationsKey, usersQuery } from '../api/queries'
+import { useEscapeKey } from '../lib/useEscapeKey'
+import { ErrorNotice } from './ErrorNotice'
 import { PresenceDot } from './PresenceDot'
 
 export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: ConversationDetail; onClose: () => void }) {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  useEscapeKey(onClose)
   const { data: users = [] } = useQuery(usersQuery)
   const [title, setTitle] = useState(detail.title ?? '')
   const memberIds = new Set(detail.members.map((u) => u.id))
@@ -47,7 +50,7 @@ export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: Co
 
   return (
     <div className="dialog-backdrop" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog" role="dialog" aria-modal="true" aria-label="그룹 설정" onClick={(e) => e.stopPropagation()}>
         <h3>그룹 설정</h3>
         <div className="composer-row">
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ flex: 1 }} />
@@ -84,6 +87,9 @@ export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: Co
               ))}
             </ul>
           </>
+        )}
+        {(rename.isError || addMember.isError || removeMember.isError || leave.isError) && (
+          <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />
         )}
         <div className="dialog-actions">
           <button className="btn-danger" disabled={leave.isPending} onClick={() => leave.mutate()}>나가기</button>

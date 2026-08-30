@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderBody } from '../src/lib/text'
 
@@ -24,5 +24,12 @@ describe('renderBody', () => {
 
   it('멤버가 아닌 @텍스트는 그대로 둔다', () => {
     expect(html('@아무개 안녕', ['김철수'])).not.toContain('mention')
+  })
+
+  it('URL 끝 문장부호는 링크에서 제외한다', () => {
+    render(<p>{renderBody('보세요 https://example.com/a. 그리고 끝', [])}</p>)
+    const link = screen.getByRole('link')
+    expect(link.getAttribute('href')).toBe('https://example.com/a')
+    expect(link.textContent).toBe('https://example.com/a')
   })
 })

@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { apiJson } from '../api/http'
 import { conversationsKey, usersQuery } from '../api/queries'
+import { useEscapeKey } from '../lib/useEscapeKey'
 
 export function NewChatDialog({ me, onClose }: { me: UserDto; onClose: (conversationId?: string) => void }) {
   const qc = useQueryClient()
+  useEscapeKey(() => onClose())
   const { data: users = [] } = useQuery(usersQuery)
   const [selected, setSelected] = useState<string[]>([])
   const [title, setTitle] = useState('')
@@ -30,7 +32,7 @@ export function NewChatDialog({ me, onClose }: { me: UserDto; onClose: (conversa
 
   return (
     <div className="dialog-backdrop" onClick={() => onClose()}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog" role="dialog" aria-modal="true" aria-label="새 채팅" onClick={(e) => e.stopPropagation()}>
         <h3>새 채팅</h3>
         <input
           type="text"

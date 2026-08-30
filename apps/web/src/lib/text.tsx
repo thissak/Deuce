@@ -35,14 +35,15 @@ export function renderBody(body: string, memberNames: string[]): ReactNode {
   let last = 0
   let i = 0
   for (const match of body.matchAll(URL_RE)) {
+    const url = match[0].replace(/[.,;:!?]+$/, '') // 문장 끝에 붙은 부호는 링크가 아니다
     const start = match.index
     if (start > last) out.push(...renderMentions(body.slice(last, start), memberNames, `t${i}`))
     out.push(
-      <a key={`l${i++}`} href={match[0]} target="_blank" rel="noreferrer">
-        {match[0]}
+      <a key={`l${i++}`} href={url} target="_blank" rel="noreferrer">
+        {url}
       </a>,
     )
-    last = start + match[0].length
+    last = start + url.length
   }
   if (last < body.length) out.push(...renderMentions(body.slice(last), memberNames, 'tail'))
   return out

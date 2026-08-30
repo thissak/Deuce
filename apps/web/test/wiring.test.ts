@@ -1,21 +1,34 @@
 import { QueryClient } from '@tanstack/react-query'
-import { RT } from '@deuce/shared'
+import { RT, RTC } from '@deuce/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { conversationsKey, messagesKey, presenceKey } from '../src/api/queries'
 import type { MessagesData } from '../src/realtime/cache'
 import type { AppSocket } from '../src/realtime/socket'
-import { attachRealtime } from '../src/realtime/wiring'
-import { msg } from './cache.test'
+import { attachPresenceSignals, attachRealtime } from '../src/realtime/wiring'
+import { msg } from './fixtures'
 
 class FakeSocket {
   handlers = new Map<string, (...args: never[]) => void>()
+  emitted: string[] = []
   on(event: string, fn: (...args: never[]) => void) {
     this.handlers.set(event, fn)
+    return this
+  }
+  off(event: string, fn: (...args: never[]) => void) {
+    if (this.handlers.get(event) === fn) this.handlers.delete(event)
     return this
   }
   fire(event: string, ...args: unknown[]) {
     this.handlers.get(event)?.(...(args as never[]))
   }
+  emit(event: string) {
+    this.emitted.push(event)
+    return this
+  }
+}
+
+function setHidden(hidden: boolean) {
+  Object.defineProperty(document, 'hidden', { value: hidden, configurable: true })
 }
 
 function setup() {
@@ -104,5 +117,31 @@ describe('attachRealtime', () => {
     const spy = vi.spyOn(qc, 'invalidateQueries')
     socket.fire('connect')
     expect(spy).toHaveBeenCalledWith()
+  })
+
+  it('detach 후에는 이벤트가 캐시를 건드리지 않는다', () => {
+    const qc = new QueryClient()
+    const socket = new FakeSocket()
+    const detach = attachRealtime(socket as unknown as AppSocket, qc, 'me1')
+    seedMessages(qc, 'c1')
+    detach()
+    socket.fire(RT.messageNew, msg({ id: 'n1', conversationId: 'c1' }))
+    expect(qc.getQueryData<MessagesData>(messagesKey('c1'))?.pages[0]?.items[0]?.id).toBe('seed')
+  })
+})
+
+describe('attachPresenceSignals', () => {
+  it('탭 숨김/복귀·포커스에 맞춰 presence 신호를 보내고 detach 후에는 보내지 않는다', () => {
+    const socket = new FakeSocket()
+    const detach = attachPresenceSignals(socket as unknown as AppSocket)
+    setHidden(true)
+    document.dispatchEvent(new Event('visibilitychange'))
+    setHidden(false)
+    document.dispatchEvent(new Event('visibilitychange'))
+    window.dispatchEvent(new Event('focus'))
+    expect(socket.emitted).toEqual([RTC.presenceAway, RTC.presenceActive, RTC.presenceActive])
+    detach()
+    window.dispatchEvent(new Event('focus'))
+    expect(socket.emitted).toHaveLength(3)
   })
 })

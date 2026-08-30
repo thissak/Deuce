@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hasMyReaction, REACTION_EMOJIS } from '../src/lib/messages'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 describe('reactions', () => {
   it('팔레트는 6종', () => {
