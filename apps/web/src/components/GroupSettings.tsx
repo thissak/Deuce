@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, apiJson } from '../api/http'
 import { conversationKey, conversationsKey, usersQuery } from '../api/queries'
+import { ErrorNotice } from './ErrorNotice'
 import { PresenceDot } from './PresenceDot'
 
 export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: ConversationDetail; onClose: () => void }) {
@@ -84,6 +85,9 @@ export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: Co
               ))}
             </ul>
           </>
+        )}
+        {(rename.isError || addMember.isError || removeMember.isError || leave.isError) && (
+          <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />
         )}
         <div className="dialog-actions">
           <button className="btn-danger" disabled={leave.isPending} onClick={() => leave.mutate()}>나가기</button>

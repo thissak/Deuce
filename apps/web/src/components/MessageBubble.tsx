@@ -7,6 +7,7 @@ import { formatBytes, formatTime } from '../lib/format'
 import { hasMyReaction, REACTION_EMOJIS } from '../lib/messages'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
+import { ErrorNotice } from './ErrorNotice'
 
 /** 액션 응답(MessageDto)을 캐시에 반영. 404면 사라진 메시지 — 타임라인 재조회(이월: 404 비대칭) */
 function useMessageAction(conversationId: string) {
@@ -45,6 +46,7 @@ export function MessageBubble({
   onReply: (m: MessageDto) => void
 }) {
   const action = useMessageAction(m.conversationId)
+  const actionFailed = action.isError && !(action.error instanceof ApiError && action.error.status === 404)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -95,7 +97,7 @@ export function MessageBubble({
           ) : editing ? (
             <div>
               <textarea value={draft} maxLength={4000} onChange={(e) => setDraft(e.target.value)} rows={2} />
-              {action.isError && <div className="composer-error">수정에 실패했습니다. 다시 시도해 주세요.</div>}
+              {action.isError && <ErrorNotice message="수정에 실패했습니다. 다시 시도해 주세요." />}
               <div className="dialog-actions">
                 <button className="btn-plain" onClick={() => setEditing(false)}>
                   취소
@@ -143,6 +145,7 @@ export function MessageBubble({
                 ))}
             </div>
           )}
+          {actionFailed && !editing && <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />}
         </div>
         {!m.deleted && m.attachments.length > 0 && (
           <div>
