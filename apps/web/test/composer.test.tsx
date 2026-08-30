@@ -108,4 +108,40 @@ describe('Composer 멘션', () => {
     expect(body.body).toBe('@김철수 확인 부탁드립니다')
     expect(body.mentions).toEqual(['u2'])
   })
+
+  it('멘션 삽입 후 캐럿이 멘션 바로 뒤에 놓인다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    fireEvent.change(box, { target: { value: '안녕 @ 뒤에도' } })
+    box.setSelectionRange(4, 4)
+    fireEvent.click(box) // refreshMention이 캐럿 위치를 읽는다
+    fireEvent.mouseDown(screen.getByRole('button', { name: /김철수/ }))
+    await waitFor(() => {
+      expect(box.value).toBe('안녕 @김철수  뒤에도')
+      expect(box.selectionStart).toBe(8) // '안녕 @김철수 ' 바로 뒤 (start 3 + '@'1 + 이름3 + 공백1)
+    })
+  })
+
+  it("'@'만 입력한 Enter는 멘션 선택이 아니라 전송이다", async () => {
+    const posted = msg({ id: 'new1', conversationId: 'c1', body: '@' })
+    const fn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(posted), { status: 201, headers: { 'content-type': 'application/json' } }),
+    )
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    await userEvent.type(screen.getByRole('textbox'), '@{Enter}')
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+  })
+
+  it('본문 앞뒤 공백을 잘라 보낸다', async () => {
+    const posted = msg({ id: 'new1', conversationId: 'c1' })
+    const fn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(posted), { status: 201, headers: { 'content-type': 'application/json' } }),
+    )
+    renderComposer(fn as unknown as typeof fetch)
+    await userEvent.type(screen.getByRole('textbox'), ' 안녕 {Enter}')
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    const body = JSON.parse((fn.mock.calls[0]?.[1] as RequestInit).body as string) as { body: string }
+    expect(body.body).toBe('안녕')
+  })
 })
