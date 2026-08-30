@@ -2,7 +2,7 @@ import { MessageDtoSchema, type MessageDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, ApiError, apiJson } from '../api/http'
-import { messagesKey } from '../api/queries'
+import { conversationKey, messagesKey } from '../api/queries'
 import { formatBytes, formatTime } from '../lib/format'
 import { hasMyReaction, REACTION_EMOJIS } from '../lib/messages'
 import { renderBody } from '../lib/text'
@@ -21,6 +21,7 @@ function useMessageAction(conversationId: string) {
       return raw === undefined ? null : MessageDtoSchema.parse(raw)
     },
     onSuccess: (m) => {
+      void qc.invalidateQueries({ queryKey: conversationKey(conversationId) }) // 고정 배너 즉시 갱신
       if (m) qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => replaceMessage(d, m))
       else void qc.invalidateQueries({ queryKey: messagesKey(conversationId) }) // DELETE 204 — 소켓이 마스킹 DTO를 보내주지만 안전망
     },

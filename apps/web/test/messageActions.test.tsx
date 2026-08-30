@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { messagesKey } from '../src/api/queries'
+import { conversationKey, messagesKey } from '../src/api/queries'
 import { MessageBubble } from '../src/components/MessageBubble'
 import type { MessagesData } from '../src/realtime/cache'
 import { msg } from './fixtures'
@@ -90,6 +90,14 @@ describe('MessageBubble 액션', () => {
     const spy = vi.spyOn(qc, 'invalidateQueries')
     await userEvent.click(screen.getByRole('button', { name: '고정' }))
     await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: messagesKey('c1') }))
+  })
+
+  it('고정 성공 시 대화 상세(고정 배너)를 즉시 재조회한다', async () => {
+    const fn = jsonStub(msg({ pinnedAt: '2026-08-29T01:00:00.000Z' }))
+    const qc = renderBubble(msg({}), fn)
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    await userEvent.click(screen.getByRole('button', { name: '고정' }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: conversationKey('c1') }))
   })
 
   it('고정된 메시지는 해제 버튼을 보여준다', async () => {

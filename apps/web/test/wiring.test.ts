@@ -13,6 +13,10 @@ class FakeSocket {
     this.handlers.set(event, fn)
     return this
   }
+  off(event: string, fn: (...args: never[]) => void) {
+    if (this.handlers.get(event) === fn) this.handlers.delete(event)
+    return this
+  }
   fire(event: string, ...args: unknown[]) {
     this.handlers.get(event)?.(...(args as never[]))
   }
@@ -104,5 +108,15 @@ describe('attachRealtime', () => {
     const spy = vi.spyOn(qc, 'invalidateQueries')
     socket.fire('connect')
     expect(spy).toHaveBeenCalledWith()
+  })
+
+  it('detach 후에는 이벤트가 캐시를 건드리지 않는다', () => {
+    const qc = new QueryClient()
+    const socket = new FakeSocket()
+    const detach = attachRealtime(socket as unknown as AppSocket, qc, 'me1')
+    seedMessages(qc, 'c1')
+    detach()
+    socket.fire(RT.messageNew, msg({ id: 'n1', conversationId: 'c1' }))
+    expect(qc.getQueryData<MessagesData>(messagesKey('c1'))?.pages[0]?.items[0]?.id).toBe('seed')
   })
 })
