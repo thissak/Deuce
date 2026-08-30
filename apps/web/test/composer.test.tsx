@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Composer } from '../src/components/Composer'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
 const mate = { id: 'u2', email: 'b@example.com', name: '김철수', avatarUrl: null }

@@ -7,7 +7,7 @@ import { sharedKey } from '../src/api/queries'
 import { Composer } from '../src/components/Composer'
 import { MessageBubble } from '../src/components/MessageBubble'
 import { SharedTab } from '../src/components/SharedTab'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
 

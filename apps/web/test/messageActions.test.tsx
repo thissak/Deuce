@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { messagesKey } from '../src/api/queries'
 import { MessageBubble } from '../src/components/MessageBubble'
 import type { MessagesData } from '../src/realtime/cache'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 const meId = 'u1'
 

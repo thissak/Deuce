@@ -5,7 +5,7 @@ import { conversationsKey, messagesKey, presenceKey } from '../src/api/queries'
 import type { MessagesData } from '../src/realtime/cache'
 import type { AppSocket } from '../src/realtime/socket'
 import { attachRealtime } from '../src/realtime/wiring'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 class FakeSocket {
   handlers = new Map<string, (...args: never[]) => void>()

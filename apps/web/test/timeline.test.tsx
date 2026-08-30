@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Timeline } from '../src/components/Timeline'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
 // 서버는 최신순으로 준다 — m2가 최신

@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { conversationsKey } from '../src/api/queries'
 import { maybeNotify } from '../src/lib/notify'
-import { msg } from './cache.test'
+import { msg } from './fixtures'
 
 class FakeNotification {
   static permission = 'granted'
