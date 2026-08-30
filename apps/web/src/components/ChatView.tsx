@@ -39,6 +39,15 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
       </section>
     )
   }
+  if (detail.isError && !detail.data) {
+    return (
+      <section className="chat-view">
+        <div className="chat-error">
+          <ErrorNotice message="대화 정보를 불러오지 못했습니다." onRetry={() => void detail.refetch()} />
+        </div>
+      </section>
+    )
+  }
   if (!detail.data) return <section className="chat-view" />
 
   const c = detail.data

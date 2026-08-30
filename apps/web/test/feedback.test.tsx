@@ -5,9 +5,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { conversationKey, messagesKey } from '../src/api/queries'
+import { ActivityPage } from '../src/components/ActivityPage'
 import { ChatView } from '../src/components/ChatView'
 import { GroupSettings } from '../src/components/GroupSettings'
 import { MessageBubble } from '../src/components/MessageBubble'
+import { SearchBox } from '../src/components/SearchBox'
+import { Timeline } from '../src/components/Timeline'
 import type { MessagesData } from '../src/realtime/cache'
 import { msg } from './fixtures'
 
@@ -87,5 +90,74 @@ describe('뮤테이션 실패 피드백', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: '이름 변경' }))
     expect(await screen.findByText(/요청에 실패했습니다/)).toBeTruthy()
+  })
+})
+
+describe('조회 실패 피드백', () => {
+  it('대화 상세 조회 실패 시 안내 + 다시 시도 버튼', async () => {
+    const fn = failStub()
+    vi.stubGlobal('fetch', fn)
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={makeQc()}>
+          <ChatView me={me} conversationId="c1" />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('대화 정보를 불러오지 못했습니다.')).toBeTruthy()
+    const before = fn.mock.calls.length
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => expect(fn.mock.calls.length).toBeGreaterThan(before))
+  })
+
+  it('타임라인 조회 실패 시 안내 + 다시 시도 버튼', async () => {
+    vi.stubGlobal('fetch', failStub())
+    render(
+      <QueryClientProvider client={makeQc()}>
+        <Timeline me={me} conversationId="c1" members={[me, mate]} onReply={() => {}} />
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('메시지를 불러오지 못했습니다.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+
+  it('검색은 로딩과 실패를 구분해 보여준다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {}))) // 영원히 pending
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={makeQc()}>
+          <SearchBox />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const box = screen.getByRole('textbox')
+    await userEvent.type(box, '안녕{Enter}')
+    expect(await screen.findByText('검색 중…')).toBeTruthy()
+  })
+
+  it('검색 실패 시 실패 문구 + 다시 시도', async () => {
+    vi.stubGlobal('fetch', failStub())
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={makeQc()}>
+          <SearchBox />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    await userEvent.type(screen.getByRole('textbox'), '안녕{Enter}')
+    expect(await screen.findByText('검색에 실패했습니다.')).toBeTruthy()
+  })
+
+  it('활동 피드는 로딩·실패·빈 상태를 구분한다', async () => {
+    vi.stubGlobal('fetch', failStub())
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={makeQc()}>
+          <ActivityPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('활동을 불러오지 못했습니다.')).toBeTruthy()
+    expect(screen.queryByText('새 활동이 없습니다.')).toBeNull()
   })
 })
