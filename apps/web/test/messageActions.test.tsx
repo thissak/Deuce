@@ -65,6 +65,18 @@ describe('MessageBubble 액션', () => {
     })
   })
 
+  it('반응 성공 시 대화 상세(고정 배너)를 재조회하지 않는다', async () => {
+    const fn = jsonStub(msg({ reactions: [{ emoji: '👍', userIds: [meId] }] }))
+    const qc = renderBubble(msg({}), fn, true, [msg({ id: 'm2' }), msg({})])
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    await userEvent.click(screen.getByRole('button', { name: '👍' }))
+    await waitFor(() => {
+      const items = qc.getQueryData<MessagesData>(messagesKey('c1'))?.pages[0]?.items
+      expect(items?.[1]?.reactions).toEqual([{ emoji: '👍', userIds: [meId] }])
+    })
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: conversationKey('c1') })
+  })
+
   it('삭제 204 응답 뒤 타임라인을 재조회한다', async () => {
     const fn = jsonStub(null, 204)
     const qc = renderBubble(msg({}), fn)

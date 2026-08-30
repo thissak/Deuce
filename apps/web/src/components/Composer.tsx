@@ -91,7 +91,7 @@ export function Composer({
     mutationFn: async (f: File) => {
       const fd = new FormData()
       fd.append('file', f)
-      fd.append('body', text)
+      fd.append('body', text.trim())
       const res = await fetch(`/api/conversations/${conversationId}/attachments`, {
         method: 'POST',
         credentials: 'same-origin',

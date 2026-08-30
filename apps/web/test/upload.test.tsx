@@ -46,13 +46,13 @@ describe('첨부 업로드', () => {
     const input = screen.getByTestId('file-input') as HTMLInputElement
     await userEvent.upload(input, new File(['hello'], 'a.txt', { type: 'text/plain' }))
     expect(screen.getByText(/a\.txt/)).toBeTruthy()
-    await userEvent.type(screen.getByRole('textbox'), '캡션입니다')
+    await userEvent.type(screen.getByRole('textbox'), '  캡션입니다  ')
     await userEvent.click(screen.getByText('보내기'))
     await waitFor(() => expect(fn).toHaveBeenCalledOnce())
     const [url, init] = fn.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('/api/conversations/c1/attachments')
     expect(init.body).toBeInstanceOf(FormData)
-    expect((init.body as FormData).get('body')).toBe('캡션입니다')
+    expect((init.body as FormData).get('body')).toBe('캡션입니다') // 앞뒤 공백은 trim된다
     expect(((init.body as FormData).get('file') as File).name).toBe('a.txt')
   })
 
