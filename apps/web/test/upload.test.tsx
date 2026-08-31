@@ -155,6 +155,17 @@ describe('드래그앤드롭 첨부', () => {
     expect(screen.getByText('여러 파일 중 첫 번째만 첨부됩니다.')).toBeTruthy()
   })
 
+  it('여러 파일 중 첫 번째가 크기를 넘으면 첨부 안내 대신 크기 오류만 보여준다', async () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    const big = new File([new Uint8Array(26214401)], 'big.png', { type: 'image/png' })
+    const small = new File(['y'], 'b.png', { type: 'image/png' })
+    fireEvent.drop(composer, { dataTransfer: { files: [big, small], types: ['Files'] } })
+    expect(await screen.findByText(/파일이 너무 큽니다/)).toBeTruthy()
+    expect(screen.queryByText(/big\.png/)).toBeNull() // 첨부된 게 없다
+    expect(screen.queryByText('여러 파일 중 첫 번째만 첨부됩니다.')).toBeNull()
+  })
+
   it('업로드 중에는 드롭을 무시한다', async () => {
     let resolveFetch!: (v: Response) => void
     const fn = vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve }))

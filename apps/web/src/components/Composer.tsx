@@ -79,14 +79,16 @@ export function Composer({
     },
   })
 
-  const pickFile = (f: File | null) => {
+  /** 첨부로 받아들였으면 true — 드롭 쪽에서 안내 문구를 띄울지 판단하는 데 쓴다 */
+  const pickFile = (f: File | null): boolean => {
     if (f && f.size > MAX_FILE_BYTES) {
       setFileError('파일이 너무 큽니다 (최대 25MB).')
       setFile(null)
-      return
+      return false
     }
     setFileError(null)
     setFile(f)
+    return true
   }
 
   const isFileDrag = (e: DragEvent<HTMLDivElement>) => e.dataTransfer.types.includes('Files')
@@ -118,8 +120,10 @@ export function Composer({
     if (upload.isPending) return
     const files = e.dataTransfer.files
     if (files.length === 0) return
-    setMultiDropNotice(files.length > 1) // 서버 계약상 메시지당 첨부는 하나뿐이라 첫 파일만 취한다
-    pickFile(files[0]!)
+    // 서버 계약상 메시지당 첨부는 하나뿐이라 첫 파일만 취한다.
+    // 그 파일이 거부되면 첨부된 게 없으므로 "첫 번째만" 안내도 띄우지 않는다
+    const accepted = pickFile(files[0]!)
+    setMultiDropNotice(accepted && files.length > 1)
   }
 
   // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약)

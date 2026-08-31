@@ -76,6 +76,8 @@ a { color: #5b5fc7; text-decoration: none; }
 .msg-row.highlight .bubble { outline: 2px solid #eaa300; transition: outline 0.3s; }
 .msg-actions { position: absolute; top: -14px; right: 4px; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
 .msg-row:hover .msg-actions { display: flex; }
+/* 팝오버가 액션 바의 자식이라, 열려 있는 동안은 hover가 풀려도 바가 남아야 한다 */
+.msg-actions:has(.reaction-palette), .msg-actions:has(.msg-menu) { display: flex; }
 .msg-actions button { border: none; background: none; padding: 3px 6px; font-size: 12px; }
 .msg-actions button:hover { background: #f0f0f0; }
 .msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
