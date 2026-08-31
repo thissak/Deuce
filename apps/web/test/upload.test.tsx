@@ -1,6 +1,6 @@
 import type { MessageDto, SharedFile } from '@deuce/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sharedKey } from '../src/api/queries'
@@ -96,6 +96,78 @@ describe('첨부 업로드', () => {
     await userEvent.click(screen.getByRole('button', { name: '✕' }))
     expect(screen.queryByText(/a\.txt/)).toBeNull()
     expect((screen.getByText('보내기') as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('드래그앤드롭 첨부', () => {
+  it('컴포저에 파일을 드롭하면 첨부된다', async () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    const file = new File(['x'], 'photo.png', { type: 'image/png' })
+    fireEvent.drop(composer, { dataTransfer: { files: [file], types: ['Files'] } })
+    expect(await screen.findByText(/photo\.png/)).toBeTruthy()
+  })
+
+  it('25MB 초과 파일을 드롭하면 기존 용량 오류를 보여주고 첨부하지 않는다', async () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    const big = new File([''], 'big.bin')
+    Object.defineProperty(big, 'size', { value: 26214401 })
+    fireEvent.drop(composer, { dataTransfer: { files: [big], types: ['Files'] } })
+    expect(await screen.findByText(/최대 25MB/)).toBeTruthy()
+    expect(screen.queryByText(/big\.bin/)).toBeNull()
+  })
+
+  it('드래그오버 중에는 어포던스를 보여주고, 벗어나면 사라진다', () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    fireEvent.dragEnter(composer, { dataTransfer: { types: ['Files'] } })
+    expect(composer.className).toContain('dragging')
+    fireEvent.dragLeave(composer, { dataTransfer: { types: ['Files'] } })
+    expect(composer.className).not.toContain('dragging')
+  })
+
+  it('자식 엘리먼트로 이동하는 dragleave는 어포던스를 유지한다', () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    const child = screen.getByRole('textbox')
+    fireEvent.dragEnter(composer, { dataTransfer: { types: ['Files'] } })
+    fireEvent.dragEnter(child, { dataTransfer: { types: ['Files'] } })
+    fireEvent.dragLeave(child, { dataTransfer: { types: ['Files'] } })
+    expect(composer.className).toContain('dragging')
+  })
+
+  it('텍스트 드래그는 어포던스를 켜지 않는다', () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    fireEvent.dragEnter(composer, { dataTransfer: { types: ['text/plain'] } })
+    expect(composer.className).not.toContain('dragging')
+  })
+
+  it('여러 파일을 드롭하면 첫 번째만 첨부하고 안내를 보여준다', async () => {
+    renderComposer(vi.fn())
+    const composer = screen.getByTestId('composer')
+    const a = new File(['x'], 'a.png', { type: 'image/png' })
+    const b = new File(['y'], 'b.png', { type: 'image/png' })
+    fireEvent.drop(composer, { dataTransfer: { files: [a, b], types: ['Files'] } })
+    expect(await screen.findByText(/a\.png/)).toBeTruthy()
+    expect(screen.queryByText(/b\.png/)).toBeNull()
+    expect(screen.getByText('여러 파일 중 첫 번째만 첨부됩니다.')).toBeTruthy()
+  })
+
+  it('업로드 중에는 드롭을 무시한다', async () => {
+    let resolveFetch!: (v: Response) => void
+    const fn = vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve }))
+    renderComposer(fn)
+    const composer = screen.getByTestId('composer')
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt'))
+    await userEvent.click(screen.getByText('보내기'))
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    const other = new File(['y'], 'other.png', { type: 'image/png' })
+    fireEvent.drop(composer, { dataTransfer: { files: [other], types: ['Files'] } })
+    expect(screen.getByText(/a\.txt/)).toBeTruthy()
+    expect(screen.queryByText(/other\.png/)).toBeNull()
+    resolveFetch(new Response(JSON.stringify(msg({ id: 'up9' })), { status: 201, headers: { 'content-type': 'application/json' } }))
   })
 })
 

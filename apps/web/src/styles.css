@@ -86,6 +86,7 @@ a { color: #5b5fc7; text-decoration: none; }
 
 /* 컴포저 */
 .composer { border-top: 1px solid #e0e0e0; padding: 10px 16px; }
+.composer.dragging { border: 2px dashed #5b5fc7; background: #f0f2fc; padding: 9px 15px; }
 .composer-error { color: #c4314b; font-size: 12px; margin-bottom: 6px; }
 .error-notice { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: #fcf0f2; color: #c4314b; font-size: 12.5px; }
 .composer-hint { color: #888; font-size: 12px; margin-bottom: 6px; }
