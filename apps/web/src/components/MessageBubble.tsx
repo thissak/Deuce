@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, ApiError, apiJson } from '../api/http'
 import { conversationKey, messagesKey } from '../api/queries'
-import { formatBytes, formatTime } from '../lib/format'
+import { formatBytes, formatTime, isImage } from '../lib/format'
 import { hasMyReaction } from '../lib/messages'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
@@ -51,6 +51,7 @@ export function MessageBubble({
   const actionFailed = action.isError && !(action.error instanceof ApiError && action.error.status === 404)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({}) // 썸네일 로드 실패 시 파일 카드로 대체
 
   const toggleReaction = (emoji: string) => {
     action.mutate(
@@ -130,11 +131,25 @@ export function MessageBubble({
         </div>
         {!m.deleted && m.attachments.length > 0 && (
           <div>
-            {m.attachments.map((a) => (
-              <a key={a.id} className="attachment" href={`/api/attachments/${a.id}`}>
-                📎 {a.fileName} <span className="size">{formatBytes(a.size)}</span>
-              </a>
-            ))}
+            {m.attachments.map((a) =>
+              isImage(a.contentType) && !imgErrors[a.id] ? (
+                <a key={a.id} className="attachment-image" href={`/api/attachments/${a.id}`} target="_blank" rel="noreferrer">
+                  <img
+                    src={`/api/attachments/${a.id}`}
+                    alt={a.fileName}
+                    loading="lazy"
+                    onError={() => setImgErrors((e) => ({ ...e, [a.id]: true }))}
+                  />
+                  <span className="attachment-caption">
+                    {a.fileName} <span className="size">{formatBytes(a.size)}</span>
+                  </span>
+                </a>
+              ) : (
+                <a key={a.id} className="attachment" href={`/api/attachments/${a.id}`}>
+                  📎 {a.fileName} <span className="size">{formatBytes(a.size)}</span>
+                </a>
+              ),
+            )}
           </div>
         )}
         {!m.deleted && m.reactions.length > 0 && (

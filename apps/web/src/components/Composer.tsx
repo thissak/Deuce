@@ -1,9 +1,9 @@
 import { MessageDtoSchema, type MessageDto, type UserDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import { ApiError, apiJson } from '../api/http'
 import { messagesKey, sharedKey } from '../api/queries'
-import { formatBytes } from '../lib/format'
+import { formatBytes, isImage } from '../lib/format'
 import { collectMentionIds, mentionQueryAt } from '../lib/mentions'
 import { appendMessage, type MessagesData } from '../realtime/cache'
 
@@ -29,6 +29,7 @@ export function Composer({
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [multiDropNotice, setMultiDropNotice] = useState(false)
   const dragCounterRef = useRef(0) // dragleave가 자식 엘리먼트 이동에도 발생하므로 카운터로 진짜 이탈을 판별한다
@@ -62,6 +63,17 @@ export function Composer({
       el.setSelectionRange(pos, pos)
     }
   }, [text])
+
+  // 이미지 파일일 때만 미리보기 URL을 만든다 — 교체·해제·언마운트 모두 이 정리에서 해제된다
+  useEffect(() => {
+    if (!file || !isImage(file.type)) return
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => {
+      URL.revokeObjectURL(url)
+      setPreviewUrl(null)
+    }
+  }, [file])
 
   const send = useMutation({
     mutationFn: async () =>
@@ -184,6 +196,7 @@ export function Composer({
       )}
       {file && (
         <div className="file-chip">
+          {previewUrl && <img className="file-chip-preview" src={previewUrl} alt={file.name} />}
           📎 {file.name} <span className="size">({formatBytes(file.size)})</span>
           <button
             className="chip-close"

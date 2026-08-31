@@ -2,7 +2,7 @@ import type { MessageDto, SharedFile } from '@deuce/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sharedKey } from '../src/api/queries'
 import { Composer } from '../src/components/Composer'
 import { MessageBubble } from '../src/components/MessageBubble'
@@ -96,6 +96,58 @@ describe('첨부 업로드', () => {
     await userEvent.click(screen.getByRole('button', { name: '✕' }))
     expect(screen.queryByText(/a\.txt/)).toBeNull()
     expect((screen.getByText('보내기') as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('첨부 이미지 미리보기', () => {
+  // jsdom은 URL.createObjectURL을 구현하지 않으므로 스텁한다
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => 'blob:preview1')
+    URL.revokeObjectURL = vi.fn()
+  })
+
+  it('이미지 파일을 고르면 미리보기 썸네일을 보여준다', async () => {
+    renderComposer(vi.fn())
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['x'], 'shot.png', { type: 'image/png' }))
+    const img = screen.getByRole('img', { name: 'shot.png' })
+    expect(img.getAttribute('src')).toBe('blob:preview1')
+  })
+
+  it('이미지가 아닌 파일에는 미리보기를 보여주지 않는다', async () => {
+    renderComposer(vi.fn())
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt', { type: 'text/plain' }))
+    expect(screen.queryByRole('img')).toBeNull()
+  })
+
+  it('파일을 교체하면 이전 미리보기 URL을 해제한다', async () => {
+    let count = 0
+    URL.createObjectURL = vi.fn(() => `blob:preview${++count}`)
+    renderComposer(vi.fn())
+    const input = screen.getByTestId('file-input') as HTMLInputElement
+    await userEvent.upload(input, new File(['x'], 'a.png', { type: 'image/png' }))
+    await userEvent.upload(input, new File(['y'], 'b.png', { type: 'image/png' }))
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview1')
+    expect(screen.getByRole('img', { name: 'b.png' }).getAttribute('src')).toBe('blob:preview2')
+  })
+
+  it('칩의 ✕로 파일을 빼면 미리보기 URL을 해제한다', async () => {
+    renderComposer(vi.fn())
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['x'], 'a.png', { type: 'image/png' }))
+    await userEvent.click(screen.getByRole('button', { name: '✕' }))
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview1')
+  })
+
+  it('언마운트 시 미리보기 URL을 해제한다', async () => {
+    vi.stubGlobal('fetch', vi.fn())
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const { unmount } = render(
+      <QueryClientProvider client={qc}>
+        <Composer me={me} conversationId="c1" members={[me]} replyTo={null} onClearReply={() => {}} />
+      </QueryClientProvider>,
+    )
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['x'], 'a.png', { type: 'image/png' }))
+    unmount()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview1')
   })
 })
 
@@ -199,6 +251,45 @@ describe('첨부 표시', () => {
     const link = screen.getByRole('link', { name: /보고서\.pdf/ })
     expect(link.getAttribute('href')).toBe('/api/attachments/a1')
     expect(link.textContent).toContain('2.0KB')
+  })
+
+  it('이미지 첨부는 인라인 썸네일로 보여준다', () => {
+    const qc = new QueryClient()
+    render(
+      <QueryClientProvider client={qc}>
+        <MessageBubble
+          m={msg({ attachments: [{ id: 'a1', fileName: 'shot.png', size: 2048, contentType: 'image/png' }] })}
+          isMine
+          meId="u1"
+          memberNames={[]}
+          onReply={() => {}}
+        />
+      </QueryClientProvider>,
+    )
+    const img = screen.getByRole('img', { name: 'shot.png' })
+    expect(img.getAttribute('src')).toBe('/api/attachments/a1')
+    const link = screen.getByRole('link', { name: /shot\.png/ })
+    expect(link.getAttribute('href')).toBe('/api/attachments/a1')
+    expect(link.getAttribute('target')).toBe('_blank')
+  })
+
+  it('이미지 로드 실패 시 파일 카드로 대체한다', () => {
+    const qc = new QueryClient()
+    render(
+      <QueryClientProvider client={qc}>
+        <MessageBubble
+          m={msg({ attachments: [{ id: 'a1', fileName: 'shot.png', size: 2048, contentType: 'image/png' }] })}
+          isMine
+          meId="u1"
+          memberNames={[]}
+          onReply={() => {}}
+        />
+      </QueryClientProvider>,
+    )
+    fireEvent.error(screen.getByRole('img', { name: 'shot.png' }))
+    expect(screen.queryByRole('img')).toBeNull()
+    const link = screen.getByRole('link', { name: /shot\.png/ })
+    expect(link.getAttribute('href')).toBe('/api/attachments/a1')
   })
 
   it('공유 탭은 파일 목록을 시각·크기와 함께 보여준다', async () => {

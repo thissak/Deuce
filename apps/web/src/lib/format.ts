@@ -18,3 +18,7 @@ export function formatBytes(n: number): string {
 export function truncate(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n)}…` : s
 }
+
+export function isImage(contentType: string | undefined): boolean {
+  return contentType?.toLowerCase().startsWith('image/') ?? false
+}
