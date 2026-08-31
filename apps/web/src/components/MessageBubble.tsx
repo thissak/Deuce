@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { api, ApiError, apiJson } from '../api/http'
 import { conversationKey, messagesKey } from '../api/queries'
 import { formatBytes, formatTime } from '../lib/format'
-import { hasMyReaction, REACTION_EMOJIS } from '../lib/messages'
+import { hasMyReaction } from '../lib/messages'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
 import { ErrorNotice } from './ErrorNotice'
+import { MessageActions } from './MessageActions'
 
 /** 액션 응답(MessageDto)을 캐시에 반영. 404면 사라진 메시지 — 타임라인 재조회(이월: 404 비대칭) */
 function useMessageAction(conversationId: string) {
@@ -50,7 +51,6 @@ export function MessageBubble({
   const actionFailed = action.isError && !(action.error instanceof ApiError && action.error.status === 404)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const toggleReaction = (emoji: string) => {
     action.mutate(
@@ -72,7 +72,6 @@ export function MessageBubble({
   const startEdit = () => {
     action.reset() // 앞선 액션 실패 문구가 편집창에 남지 않도록
     setDraft(m.body)
-    setConfirmDelete(false)
     setEditing(true)
   }
 
@@ -112,39 +111,20 @@ export function MessageBubble({
             renderBody(m.body, memberNames)
           )}
           {!m.deleted && !editing && (
-            <div className="msg-actions">
-              {REACTION_EMOJIS.map((e) => (
-                <button key={e} onClick={() => toggleReaction(e)}>
-                  {e}
-                </button>
-              ))}
-              <button onClick={() => onReply(m)}>답장</button>
-              <button
-                onClick={() =>
-                  action.mutate({
-                    method: m.pinnedAt ? 'DELETE' : 'PUT',
-                    path: `/api/messages/${m.id}/pin`,
-                  })
-                }
-              >
-                {m.pinnedAt ? '고정 해제' : '고정'}
-              </button>
-              {isMine && <button onClick={startEdit}>수정</button>}
-              {isMine &&
-                (confirmDelete ? (
-                  <>
-                    <button
-                      className="btn-danger"
-                      onClick={() => action.mutate({ method: 'DELETE', path: `/api/messages/${m.id}` })}
-                    >
-                      정말 삭제
-                    </button>
-                    <button onClick={() => setConfirmDelete(false)}>취소</button>
-                  </>
-                ) : (
-                  <button onClick={() => setConfirmDelete(true)}>삭제</button>
-                ))}
-            </div>
+            <MessageActions
+              isMine={isMine}
+              isPinned={m.pinnedAt != null}
+              onToggleReaction={toggleReaction}
+              onReply={() => onReply(m)}
+              onEdit={startEdit}
+              onPin={() =>
+                action.mutate({
+                  method: m.pinnedAt ? 'DELETE' : 'PUT',
+                  path: `/api/messages/${m.id}/pin`,
+                })
+              }
+              onDelete={() => action.mutate({ method: 'DELETE', path: `/api/messages/${m.id}` })}
+            />
           )}
           {actionFailed && !editing && <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />}
         </div>

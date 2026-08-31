@@ -74,10 +74,18 @@ a { color: #5b5fc7; text-decoration: none; }
 .mention { color: #444791; font-weight: 600; }
 .edited-mark, .pin-mark { font-size: 11px; color: #888; margin-left: 6px; }
 .msg-row.highlight .bubble { outline: 2px solid #eaa300; transition: outline 0.3s; }
-.msg-actions { position: absolute; top: -14px; right: 4px; display: none; gap: 2px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; }
+.msg-actions { position: absolute; top: -14px; right: 4px; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
 .msg-row:hover .msg-actions { display: flex; }
 .msg-actions button { border: none; background: none; padding: 3px 6px; font-size: 12px; }
 .msg-actions button:hover { background: #f0f0f0; }
+.msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
+.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
+.reaction-palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 6px; width: 200px; }
+.reaction-palette button { padding: 4px; font-size: 15px; border-radius: 4px; }
+.msg-menu { display: flex; flex-direction: column; min-width: 140px; padding: 4px; }
+.msg-menu button { text-align: left; padding: 7px 10px; border-radius: 4px; white-space: nowrap; }
+.msg-menu button.btn-danger { color: #c4314b; }
+.msg-menu button.btn-danger:hover { background: #fcf0f2; }
 .reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
 .reaction-chip { border: 1px solid #d1d1d1; background: #fff; border-radius: 12px; padding: 1px 8px; font-size: 12px; }
 .reaction-chip.mine { background: #e8ebfa; border-color: #5b5fc7; }
