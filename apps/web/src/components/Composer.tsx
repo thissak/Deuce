@@ -1,9 +1,9 @@
 import { MessageDtoSchema, type MessageDto, type UserDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import { ApiError, apiJson } from '../api/http'
 import { messagesKey, sharedKey } from '../api/queries'
-import { formatBytes } from '../lib/format'
+import { formatBytes, isImage } from '../lib/format'
 import { collectMentionIds, mentionQueryAt } from '../lib/mentions'
 import { appendMessage, type MessagesData } from '../realtime/cache'
 
@@ -29,6 +29,10 @@ export function Composer({
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const [multiDropNotice, setMultiDropNotice] = useState(false)
+  const dragCounterRef = useRef(0) // dragleave가 자식 엘리먼트 이동에도 발생하므로 카운터로 진짜 이탈을 판별한다
   const candidates = mention
     ? members.filter((u) => u.id !== me.id && u.name.toLowerCase().startsWith(mention.query.toLowerCase()))
     : []
@@ -60,6 +64,17 @@ export function Composer({
     }
   }, [text])
 
+  // 이미지 파일일 때만 미리보기 URL을 만든다 — 교체·해제·언마운트 모두 이 정리에서 해제된다
+  useEffect(() => {
+    if (!file || !isImage(file.type)) return
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => {
+      URL.revokeObjectURL(url)
+      setPreviewUrl(null)
+    }
+  }, [file])
+
   const send = useMutation({
     mutationFn: async () =>
       MessageDtoSchema.parse(
@@ -76,14 +91,51 @@ export function Composer({
     },
   })
 
-  const pickFile = (f: File | null) => {
+  /** 첨부로 받아들였으면 true — 드롭 쪽에서 안내 문구를 띄울지 판단하는 데 쓴다 */
+  const pickFile = (f: File | null): boolean => {
     if (f && f.size > MAX_FILE_BYTES) {
       setFileError('파일이 너무 큽니다 (최대 25MB).')
       setFile(null)
-      return
+      return false
     }
     setFileError(null)
     setFile(f)
+    return true
+  }
+
+  const isFileDrag = (e: DragEvent<HTMLDivElement>) => e.dataTransfer.types.includes('Files')
+
+  const onDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    if (upload.isPending || !isFileDrag(e)) return
+    e.preventDefault()
+    dragCounterRef.current += 1
+    setDragging(true)
+  }
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (upload.isPending || !isFileDrag(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (!isFileDrag(e)) return
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1)
+    if (dragCounterRef.current === 0) setDragging(false)
+  }
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!isFileDrag(e)) return
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setDragging(false)
+    if (upload.isPending) return
+    const files = e.dataTransfer.files
+    if (files.length === 0) return
+    // 서버 계약상 메시지당 첨부는 하나뿐이라 첫 파일만 취한다.
+    // 그 파일이 거부되면 첨부된 게 없으므로 "첫 번째만" 안내도 띄우지 않는다
+    const accepted = pickFile(files[0]!)
+    setMultiDropNotice(accepted && files.length > 1)
   }
 
   // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약)
@@ -108,6 +160,7 @@ export function Composer({
       void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
       setText('')
       setFile(null)
+      setMultiDropNotice(false)
       onClearReply()
     },
   })
@@ -129,19 +182,34 @@ export function Composer({
   }
 
   return (
-    <div className="composer">
+    <div
+      className={dragging ? 'composer dragging' : 'composer'}
+      data-testid="composer"
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       {fileError && <div className="composer-error">{fileError}</div>}
       {(send.isError || upload.isError) && (
         <div className="composer-error">전송에 실패했습니다. 다시 시도해 주세요.</div>
       )}
       {file && (
         <div className="file-chip">
+          {previewUrl && <img className="file-chip-preview" src={previewUrl} alt={file.name} />}
           📎 {file.name} <span className="size">({formatBytes(file.size)})</span>
-          <button className="chip-close" onClick={() => setFile(null)}>
+          <button
+            className="chip-close"
+            onClick={() => {
+              setFile(null)
+              setMultiDropNotice(false)
+            }}
+          >
             ✕
           </button>
         </div>
       )}
+      {multiDropNotice && <div className="composer-hint">여러 파일 중 첫 번째만 첨부됩니다.</div>}
       {file && replyTo && <div className="composer-hint">첨부에는 답장이 포함되지 않습니다.</div>}
       {replyTo && (
         <div className="reply-chip">
@@ -161,6 +229,7 @@ export function Composer({
             hidden
             disabled={upload.isPending} // 전송 중 새로 고른 파일이 onSuccess의 초기화로 사라지지 않게
             onChange={(e) => {
+              setMultiDropNotice(false)
               pickFile(e.target.files?.[0] ?? null)
               e.target.value = '' // 같은 파일을 다시 골라도 change가 나도록
             }}

@@ -74,23 +74,38 @@ a { color: #5b5fc7; text-decoration: none; }
 .mention { color: #444791; font-weight: 600; }
 .edited-mark, .pin-mark { font-size: 11px; color: #888; margin-left: 6px; }
 .msg-row.highlight .bubble { outline: 2px solid #eaa300; transition: outline 0.3s; }
-.msg-actions { position: absolute; top: -14px; right: 4px; display: none; gap: 2px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; }
+.msg-actions { position: absolute; top: -14px; right: 4px; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
 .msg-row:hover .msg-actions { display: flex; }
+/* 팝오버가 액션 바의 자식이라, 열려 있는 동안은 hover가 풀려도 바가 남아야 한다 */
+.msg-actions:has(.reaction-palette), .msg-actions:has(.msg-menu) { display: flex; }
 .msg-actions button { border: none; background: none; padding: 3px 6px; font-size: 12px; }
 .msg-actions button:hover { background: #f0f0f0; }
+.msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
+.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
+.reaction-palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 6px; width: 200px; }
+.reaction-palette button { padding: 4px; font-size: 15px; border-radius: 4px; }
+.msg-menu { display: flex; flex-direction: column; min-width: 140px; padding: 4px; }
+.msg-menu button { text-align: left; padding: 7px 10px; border-radius: 4px; white-space: nowrap; }
+.msg-menu button.btn-danger { color: #c4314b; }
+.msg-menu button.btn-danger:hover { background: #fcf0f2; }
 .reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
 .reaction-chip { border: 1px solid #d1d1d1; background: #fff; border-radius: 12px; padding: 1px 8px; font-size: 12px; }
 .reaction-chip.mine { background: #e8ebfa; border-color: #5b5fc7; }
 .attachment { display: inline-flex; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 10px; border: 1px solid #d1d1d1; border-radius: 6px; background: #fff; }
 .attachment .size { color: #888; font-size: 12px; }
+.attachment-image { display: block; margin-top: 6px; }
+.attachment-image img { display: block; max-width: 320px; max-height: 240px; object-fit: contain; border: 1px solid #d1d1d1; border-radius: 6px; }
+.attachment-caption { display: block; margin-top: 2px; font-size: 12px; color: #888; }
 
 /* 컴포저 */
 .composer { border-top: 1px solid #e0e0e0; padding: 10px 16px; }
+.composer.dragging { border: 2px dashed #5b5fc7; background: #f0f2fc; padding: 9px 15px; }
 .composer-error { color: #c4314b; font-size: 12px; margin-bottom: 6px; }
 .error-notice { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: #fcf0f2; color: #c4314b; font-size: 12.5px; }
 .composer-hint { color: #888; font-size: 12px; margin-bottom: 6px; }
 .reply-chip, .file-chip { display: flex; align-items: center; gap: 8px; background: #f0f0f5; border-radius: 4px; padding: 6px 10px; margin-bottom: 6px; font-size: 13px; }
 .reply-chip .quote-author { flex: none; }
+.file-chip-preview { height: 64px; width: auto; max-width: 96px; object-fit: contain; border-radius: 4px; border: 1px solid #d1d1d1; }
 .chip-close { margin-left: auto; border: none; background: none; color: #888; }
 .composer-row { display: flex; gap: 8px; align-items: flex-end; }
 .composer textarea { flex: 1; resize: none; border: 1px solid #d1d1d1; border-radius: 4px; padding: 8px 10px; font: inherit; min-height: 38px; max-height: 120px; }
