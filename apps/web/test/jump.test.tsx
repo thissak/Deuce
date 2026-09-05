@@ -1,9 +1,11 @@
 import type { MessageDto, MessagePage } from '@deuce/shared'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatView } from '../src/components/ChatView'
+import { SearchBox } from '../src/components/SearchBox'
 import { useJumpToMessage } from '../src/lib/useJumpToMessage'
 
 function message(id: string): MessageDto {
@@ -115,8 +117,14 @@ describe('ChatView 점프 파라미터 정리', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((path: string, init?: RequestInit) => {
-        const body =
-          init?.method === 'PUT' ? { ok: true } : path.includes('/messages') ? page : detail
+        const body = init?.method === 'PUT' ? { ok: true }
+          : path.includes('/messages') ? page
+          : path.includes('/attachments') ? []
+          : path.includes('/search') ? [{
+              messageId: 'm1', conversationId: 'c1', conversationType: 'GROUP', conversationTitle: '팀방',
+              authorName: 'A', body: '본문', createdAt: '2026-08-29T00:00:00.000Z',
+            }]
+          : detail
         return Promise.resolve(
           new Response(JSON.stringify(body), {
             status: 200,
@@ -136,6 +144,7 @@ describe('ChatView 점프 파라미터 정리', () => {
     render(
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={[entry]}>
+          <SearchBox />
           <ChatView me={me} conversationId="c1" />
           <Probe />
         </MemoryRouter>
@@ -162,5 +171,25 @@ describe('ChatView 점프 파라미터 정리', () => {
 
     await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''))
     expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('공유 탭에서 같은 방 검색 결과를 누르면 채팅으로 전환하고 점프 후에도 유지한다', async () => {
+    stubFetch({ items: [message('m1')], nextCursor: null })
+    renderChat('/chat/c1')
+    await screen.findByText('본문')
+    await userEvent.click(screen.getByRole('button', { name: '공유' }))
+    await screen.findByText('공유된 파일이 없습니다.')
+
+    const search = screen.getByPlaceholderText('검색 (2자 이상, Enter)')
+    await userEvent.type(search, '본문{Enter}')
+    await userEvent.click(await screen.findByRole('button', { name: /팀방.*본문/ }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '채팅' }).className).toContain('active'))
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''))
+    expect(document.getElementById('msg-m1')?.classList.contains('highlight')).toBe(true)
+    expect(scrollIntoView).toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: '공유' }))
+    expect(await screen.findByText('공유된 파일이 없습니다.')).toBeTruthy()
   })
 })

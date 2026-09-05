@@ -21,6 +21,9 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const [params, setParams] = useSearchParams()
   const jumpToId = params.get('m')
 
+  // 같은 방 검색은 재마운트하지 않는다. Timeline이 열려야 점프 요청을 처리한다.
+  if (jumpToId && tab === 'shared') setTab('chat')
+
   const mute = useMutation({
     mutationFn: () => api(`/api/conversations/${conversationId}/mute`, { method: detail.data?.mutedAt ? 'DELETE' : 'PUT' }),
     onSuccess: async () => {

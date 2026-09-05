@@ -9,6 +9,9 @@ import { appendMessage, type MessagesData } from '../realtime/cache'
 
 const MAX_FILE_BYTES = 26214400 // 서버 MAX_UPLOAD_BYTES 기본값과 동일 (25MiB)
 
+/** 전송 단위. 제출 때 초안에서 떼어낸 뒤로는 outgoing mutation만 소유한다 — 실패하면 variables로 남아 재전송·버리기의 대상이 된다 */
+type Outgoing = { body: string; file: File | null; replyToId?: string; mentions: string[] }
+
 export function Composer({
   me,
   conversationId,
@@ -75,22 +78,6 @@ export function Composer({
     }
   }, [file])
 
-  const send = useMutation({
-    mutationFn: async () =>
-      MessageDtoSchema.parse(
-        await apiJson('POST', `/api/conversations/${conversationId}/messages`, {
-          body: text.trim(),
-          replyToId: replyTo?.id,
-          mentions: collectMentionIds(text, members),
-        }),
-      ),
-    onSuccess: (m) => {
-      qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => appendMessage(d, m))
-      setText('')
-      onClearReply()
-    },
-  })
-
   /** 첨부로 받아들였으면 true — 드롭 쪽에서 안내 문구를 띄울지 판단하는 데 쓴다 */
   const pickFile = (f: File | null): boolean => {
     if (f && f.size > MAX_FILE_BYTES) {
@@ -106,14 +93,14 @@ export function Composer({
   const isFileDrag = (e: DragEvent<HTMLDivElement>) => e.dataTransfer.types.includes('Files')
 
   const onDragEnter = (e: DragEvent<HTMLDivElement>) => {
-    if (upload.isPending || !isFileDrag(e)) return
+    if (!isFileDrag(e)) return
     e.preventDefault()
     dragCounterRef.current += 1
     setDragging(true)
   }
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
-    if (upload.isPending || !isFileDrag(e)) return
+    if (!isFileDrag(e)) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
   }
@@ -129,7 +116,6 @@ export function Composer({
     e.preventDefault()
     dragCounterRef.current = 0
     setDragging(false)
-    if (upload.isPending) return
     const files = e.dataTransfer.files
     if (files.length === 0) return
     // 서버 계약상 메시지당 첨부는 하나뿐이라 첫 파일만 취한다.
@@ -138,12 +124,23 @@ export function Composer({
     setMultiDropNotice(accepted && files.length > 1)
   }
 
-  // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약)
-  const upload = useMutation({
-    mutationFn: async (f: File) => {
+  // 텍스트 전송과 첨부 업로드를 한 mutation으로 묶는다 — 미해결 payload는 항상 하나뿐이고,
+  // TanStack이 이미 variables·isPending·isError·reset()으로 그 payload와 상태를 들고 있다
+  const outgoing = useMutation({
+    mutationFn: async (o: Outgoing) => {
+      if (!o.file) {
+        return MessageDtoSchema.parse(
+          await apiJson('POST', `/api/conversations/${conversationId}/messages`, {
+            body: o.body,
+            replyToId: o.replyToId,
+            mentions: o.mentions,
+          }),
+        )
+      }
+      // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약). 답장은 포함하지 않는다
       const fd = new FormData()
-      fd.append('file', f)
-      fd.append('body', text.trim())
+      fd.append('file', o.file)
+      fd.append('body', o.body)
       const res = await fetch(`/api/conversations/${conversationId}/attachments`, {
         method: 'POST',
         credentials: 'same-origin',
@@ -155,22 +152,28 @@ export function Composer({
       }
       return MessageDtoSchema.parse(await res.json())
     },
-    onSuccess: (m) => {
+    // 성공·실패 모두 초안(text·file·답장)은 건드리지 않는다 — 초안은 제출 시점에 이미 비웠다
+    onSuccess: (m, o) => {
       qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => appendMessage(d, m))
-      void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
-      setText('')
-      setFile(null)
-      setMultiDropNotice(false)
-      onClearReply()
+      if (o.file) void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
     },
   })
 
-  const pending = send.isPending || upload.isPending
+  const failed = outgoing.isError ? outgoing.variables : undefined
+  // 미해결 payload(요청 중·실패)가 있으면 새 전송을 받지 않는다 — 한 번에 하나만 다룬다. 초안 작성은 계속 가능
+  const blocked = outgoing.isPending || outgoing.isError
 
   const submit = () => {
-    if (pending) return
-    if (file) upload.mutate(file) // 파일이 있으면 캡션은 비어도 된다
-    else if (text.trim().length > 0) send.mutate()
+    if (blocked) return
+    const body = text.trim()
+    if (!file && body.length === 0) return
+    // JSON 요청에 필요한 값은 여기서 모두 확정한다 — 재전송도 같은 payload를 보낸다
+    outgoing.mutate({ body, file, replyToId: replyTo?.id, mentions: collectMentionIds(body, members) }) // 파일이 있으면 캡션은 비어도 된다
+    // 초안을 즉시 비운다 — 응답을 기다리며 쓰는 글·고르는 파일·답장은 다음 초안의 것 (실 Chrome에서 확인)
+    setText('')
+    setFile(null)
+    setMultiDropNotice(false)
+    onClearReply()
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -191,8 +194,20 @@ export function Composer({
       onDrop={onDrop}
     >
       {fileError && <div className="composer-error">{fileError}</div>}
-      {(send.isError || upload.isError) && (
-        <div className="composer-error">전송에 실패했습니다. 다시 시도해 주세요.</div>
+      {failed && (
+        <div className="composer-error" role="alert">
+          전송에 실패했습니다. 재전송하거나 버린 뒤 새 메시지를 보낼 수 있습니다:{' '}
+          <div className="composer-failed-preview">
+            {failed.file && `📎 ${failed.file.name}\n`}
+            {failed.body}
+          </div>
+          <button className="btn-plain" onClick={() => outgoing.mutate(failed)}>
+            재전송
+          </button>
+          <button className="btn-plain" onClick={() => outgoing.reset()}>
+            버리기
+          </button>
+        </div>
       )}
       {file && (
         <div className="file-chip">
@@ -227,7 +242,6 @@ export function Composer({
             data-testid="file-input"
             type="file"
             hidden
-            disabled={upload.isPending} // 전송 중 새로 고른 파일이 onSuccess의 초기화로 사라지지 않게
             onChange={(e) => {
               setMultiDropNotice(false)
               pickFile(e.target.files?.[0] ?? null)
@@ -267,7 +281,7 @@ export function Composer({
             </div>
           )}
         </div>
-        <button className="send-btn" onClick={submit} disabled={(!file && text.trim().length === 0) || pending}>
+        <button className="send-btn" onClick={submit} disabled={(!file && text.trim().length === 0) || blocked}>
           보내기
         </button>
       </div>

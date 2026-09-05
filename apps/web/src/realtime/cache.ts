@@ -3,15 +3,26 @@ import type { MessageDto, MessagePage, PresencePayload, PresenceSnapshot } from 
 
 export type MessagesData = InfiniteData<MessagePage, string>
 
+/** m 자신은 교체하고, m을 인용한 답장은 인용 본문·삭제 상태만 따라간다 (다른 탭의 수정·삭제 반영) */
+function withUpdated(i: MessageDto, m: MessageDto): MessageDto | null {
+  if (i.id === m.id) return m
+  if (i.replyTo && i.replyTo.id === m.id) return { ...i, replyTo: { ...i.replyTo, body: m.body, deleted: m.deleted } }
+  return null
+}
+
 export function replaceMessage(data: MessagesData | undefined, m: MessageDto): MessagesData | undefined {
   if (!data) return data
   let changed = false
   const pages = data.pages.map((p) => {
-    const idx = p.items.findIndex((i) => i.id === m.id)
-    if (idx === -1) return p
+    let items: MessageDto[] | null = null
+    p.items.forEach((i, idx) => {
+      const next = withUpdated(i, m)
+      if (!next) return
+      items ??= p.items.slice()
+      items[idx] = next
+    })
+    if (!items) return p
     changed = true
-    const items = p.items.slice()
-    items[idx] = m
     return { ...p, items }
   })
   return changed ? { ...data, pages } : data
