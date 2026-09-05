@@ -36,6 +36,16 @@ describe('cache updaters', () => {
     expect(replaceMessage(original, msg({ id: 'zzz' }))).toBe(original)
   })
 
+  it('replaceMessage는 그 메시지를 인용한 답장의 인용 본문·삭제 상태도 갱신한다', () => {
+    const quote = { id: 'a', body: '이전', authorName: 'A', deleted: false }
+    const d = replaceMessage(
+      data([[msg({ id: 'r', replyTo: quote })], [msg({ id: 'a', body: '이전' })]]),
+      msg({ id: 'a', body: '이후', deleted: true }),
+    )
+    expect(d?.pages[0]?.items[0]?.replyTo).toEqual({ ...quote, body: '이후', deleted: true })
+    expect(d?.pages[1]?.items[0]?.deleted).toBe(true)
+  })
+
   it('patchPresence는 offline이면 키를 지운다', () => {
     expect(patchPresence({ u1: 'online' }, { userId: 'u1', status: 'offline' })).toEqual({})
     expect(patchPresence(undefined, { userId: 'u2', status: 'away' })).toEqual({ u2: 'away' })
