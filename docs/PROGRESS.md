@@ -62,9 +62,14 @@ lifecycle: active
 동기화 누락·전송 대기 중 입력 소실·팝오버 z-index)을 발견·수정했다. 컴포저 수정은
 Codex 검수 2회에서 재전송 상태 결함이 이어져 Fix-Loop 재검토를 거쳐 단일 outgoing
 mutation 소유권 설계로 다시 만들었다. 웹 테스트 19파일 137개·빌드 통과(2026-09-05
-12:40 기준). Codex 독립 검수 최종 PASS(독립 재현 5개·`git diff --check` 포함). 커밋·
-push·PR·Electron 착수는 미실행 — 감독 결정 대기. 두 실계정 항목(unread·프레즌스·
-알림·실계정 활동)과 브라우저 실패 주입은 미검증으로 남아 있다.
+12:40 기준). Codex 독립 검수 최종 PASS(독립 재현 5개·`git diff --check` 포함).
+변경 6커밋을 push해 PR #7을 생성했고, 첫 branch-cleanup 리뷰의 WARNING(실패 원문의
+가로 넘침)을 전용 줄바꿈·스크롤 블록으로 수정했다. 실제 Composer·CSS를 사용한
+Chromium 격리 실패 주입 6경로에서 넘침 해소·재전송 payload·초안 보존을 확인했고,
+웹 137개·서버 67개 테스트와 빌드·타입 검사를 통과했다. 재리뷰·머지 결과는
+[PR #7](https://github.com/thissak/Deuce/pull/7)에서 확인한다. Electron 착수는 미실행.
+두 실계정 항목(unread·프레즌스·알림·실계정 활동)과 실제 서버·앱 전체 흐름의
+브라우저 실패 주입은 미검증으로 남아 있다.
 상세: `docs/handoff/2026-09-05-browser-verification-claude.md`.
 
 계획 ④ 산출물은 실 브라우저 검증이 남아 있다. 계획 ⑤ 착수 전에 감독과 함께

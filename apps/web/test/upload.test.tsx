@@ -120,7 +120,7 @@ describe('첨부 업로드', () => {
     await userEvent.click(screen.getByText('보내기'))
     expect(await screen.findByText(/전송에 실패했습니다/)).toBeTruthy()
     expect(screen.getByText(/a\.txt/)).toBeTruthy() // 안내 바에 파일명
-    expect(screen.getByText('캡션')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain('캡션')
     expect(box.value).toBe('')
     await userEvent.click(screen.getByRole('button', { name: '재전송' }))
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2))

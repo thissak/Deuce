@@ -101,6 +101,7 @@ a { color: #5b5fc7; text-decoration: none; }
 .composer { border-top: 1px solid #e0e0e0; padding: 10px 16px; }
 .composer.dragging { border: 2px dashed #5b5fc7; background: #f0f2fc; padding: 9px 15px; }
 .composer-error { color: #c4314b; font-size: 12px; margin-bottom: 6px; }
+.composer-failed-preview { max-width: 100%; max-height: 120px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #666; margin: 4px 0; }
 .error-notice { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: #fcf0f2; color: #c4314b; font-size: 12.5px; }
 .composer-hint { color: #888; font-size: 12px; margin-bottom: 6px; }
 .reply-chip, .file-chip { display: flex; align-items: center; gap: 8px; background: #f0f0f5; border-radius: 4px; padding: 6px 10px; margin-bottom: 6px; font-size: 13px; }

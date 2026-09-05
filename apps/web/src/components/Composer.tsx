@@ -197,8 +197,10 @@ export function Composer({
       {failed && (
         <div className="composer-error" role="alert">
           전송에 실패했습니다. 재전송하거나 버린 뒤 새 메시지를 보낼 수 있습니다:{' '}
-          {failed.file && `📎 ${failed.file.name} `}
-          <span className="convo-preview">{failed.body}</span>
+          <div className="composer-failed-preview">
+            {failed.file && `📎 ${failed.file.name}\n`}
+            {failed.body}
+          </div>
           <button className="btn-plain" onClick={() => outgoing.mutate(failed)}>
             재전송
           </button>
