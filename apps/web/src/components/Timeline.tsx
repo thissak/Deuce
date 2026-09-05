@@ -63,17 +63,27 @@ export function Timeline({
     if (el && atBottomRef.current) el.scrollTop = el.scrollHeight
   }, [messages.length])
 
+  // 과거 페이지가 커밋된 직후(페인트 전) 늘어난 높이만큼 내려 화면 위치를 유지한다.
+  // fetchNextPage가 끝난 시점에는 아직 렌더 전(react-query 알림이 setTimeout 배치)이라
+  // 거기서 보정하면 높이 차가 0으로 계산돼 무효다 — 실 Chrome에서 확인
+  const olderRef = useRef<number | null>(null) // "이전 메시지 보기" 직전 scrollHeight
+  const pageCount = q.data?.pages.length ?? 0
+  useLayoutEffect(() => {
+    const el = listRef.current
+    if (!el || olderRef.current === null) return
+    el.scrollTop += el.scrollHeight - olderRef.current
+    olderRef.current = null
+  }, [pageCount])
+
   const onScroll = () => {
     const el = listRef.current
     if (el) atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }
 
-  const loadOlder = async () => {
-    const el = listRef.current
-    const prev = el?.scrollHeight ?? 0
-    await q.fetchNextPage()
-    requestAnimationFrame(() => {
-      if (el) el.scrollTop += el.scrollHeight - prev // 위로 로드해도 화면 위치 유지
+  const loadOlder = () => {
+    olderRef.current = listRef.current?.scrollHeight ?? 0
+    void q.fetchNextPage().then((r) => {
+      if (r.isError) olderRef.current = null
     })
   }
 
@@ -81,7 +91,7 @@ export function Timeline({
     <div className="timeline" ref={listRef} onScroll={onScroll}>
       {q.isError && <ErrorNotice message="메시지를 불러오지 못했습니다." onRetry={() => void q.refetch()} />}
       {q.hasNextPage && (
-        <button className="load-older" onClick={() => void loadOlder()} disabled={q.isFetchingNextPage}>
+        <button className="load-older" onClick={loadOlder} disabled={q.isFetchingNextPage}>
           이전 메시지 보기
         </button>
       )}
