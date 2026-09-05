@@ -3,10 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sharedKey } from '../src/api/queries'
+import { messagesKey, sharedKey } from '../src/api/queries'
 import { Composer } from '../src/components/Composer'
 import { MessageBubble } from '../src/components/MessageBubble'
 import { SharedTab } from '../src/components/SharedTab'
+import type { MessagesData } from '../src/realtime/cache'
 import { msg } from './fixtures'
 
 const me = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }
@@ -17,6 +18,8 @@ function renderComposer(
 ) {
   vi.stubGlobal('fetch', fetchImpl)
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  // 성공 콜백(appendMessage)이 실제로 돌았는지 캐시로 관측하기 위한 빈 페이지
+  qc.setQueryData<MessagesData>(messagesKey('c1'), { pages: [{ items: [], nextCursor: null }], pageParams: [''] })
   render(
     <QueryClientProvider client={qc}>
       <Composer
@@ -29,6 +32,10 @@ function renderComposer(
     </QueryClientProvider>,
   )
   return qc
+}
+
+function cachedIds(qc: QueryClient): string[] {
+  return qc.getQueryData<MessagesData>(messagesKey('c1'))?.pages[0]?.items.map((m) => m.id) ?? []
 }
 
 function created(over: Parameters<typeof msg>[0]) {
@@ -77,6 +84,74 @@ describe('첨부 업로드', () => {
     expect((fn.mock.calls[0]![1] as RequestInit & { body: FormData }).body.get('body')).toBe('')
     expect(spy).toHaveBeenCalledWith({ queryKey: sharedKey('c1') })
     await waitFor(() => expect(screen.queryByText(/a\.txt/)).toBeNull())
+  })
+
+  it('업로드 응답을 기다리는 동안 이어 쓴 초안은 성공 후에도 남는다', async () => {
+    let finish!: (r: Response) => void
+    const fn = vi.fn().mockReturnValue(new Promise<Response>((r) => (finish = r)))
+    const qc = renderComposer(fn)
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt', { type: 'text/plain' }))
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(box, '캡션')
+    await userEvent.click(screen.getByText('보내기'))
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    expect(box.value).toBe('') // 전송 즉시 비운다
+    expect(screen.queryByText(/a\.txt/)).toBeNull() // 파일 칩도 제출 시점에 비운다
+    await userEvent.type(box, '업로드 도중 쓴 초안')
+    finish(new Response(JSON.stringify(msg({ id: 'up3' })), { status: 201, headers: { 'content-type': 'application/json' } }))
+    await waitFor(() => expect(cachedIds(qc)).toEqual(['up3'])) // 성공 콜백이 끝난 뒤에 초안을 검사한다
+    expect(box.value).toBe('업로드 도중 쓴 초안')
+    expect((fn.mock.calls[0]![1] as RequestInit & { body: FormData }).body.get('body')).toBe('캡션')
+  })
+
+  it('업로드가 실패하면 파일과 캡션을 보관하고 그대로 재전송한다', async () => {
+    const fn = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'boom' }), { status: 500, headers: { 'content-type': 'application/json' } }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(msg({ id: 'up4' })), { status: 201, headers: { 'content-type': 'application/json' } }),
+      )
+    renderComposer(fn)
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt', { type: 'text/plain' }))
+    await userEvent.type(box, '캡션')
+    await userEvent.click(screen.getByText('보내기'))
+    expect(await screen.findByText(/전송에 실패했습니다/)).toBeTruthy()
+    expect(screen.getByText(/a\.txt/)).toBeTruthy() // 안내 바에 파일명
+    expect(screen.getByText('캡션')).toBeTruthy()
+    expect(box.value).toBe('')
+    await userEvent.click(screen.getByRole('button', { name: '재전송' }))
+    await waitFor(() => expect(fn).toHaveBeenCalledTimes(2))
+    const fd = (fn.mock.calls[1]![1] as RequestInit).body as FormData
+    expect((fd.get('file') as File).name).toBe('a.txt')
+    expect(fd.get('body')).toBe('캡션')
+    await waitFor(() => expect(screen.queryByText(/전송에 실패했습니다/)).toBeNull())
+  })
+
+  it('실패한 첨부를 재전송해 성공해도 새 초안의 파일은 남는다', async () => {
+    let finish!: (r: Response) => void
+    const fn = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<Response>((r) => (finish = r)))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(msg({ id: 'up5' })), { status: 201, headers: { 'content-type': 'application/json' } }),
+      )
+    const qc = renderComposer(fn)
+    const input = screen.getByTestId('file-input')
+    await userEvent.upload(input, new File(['a'], 'failed-a.txt', { type: 'text/plain' }))
+    await userEvent.type(screen.getByRole('textbox'), '캡션 A')
+    await userEvent.click(screen.getByText('보내기'))
+    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    finish(new Response(JSON.stringify({ error: 'boom' }), { status: 500, headers: { 'content-type': 'application/json' } }))
+    await screen.findByText(/전송에 실패했습니다/)
+    await userEvent.upload(input, new File(['b'], 'draft-b.txt', { type: 'text/plain' }))
+    expect(screen.getByText(/draft-b\.txt/)).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: '재전송' }))
+    await waitFor(() => expect(cachedIds(qc)).toEqual(['up5'])) // 재전송 성공 콜백까지 완료
+    expect(screen.queryByText(/전송에 실패했습니다/)).toBeNull()
+    expect(screen.getByText(/draft-b\.txt/)).toBeTruthy() // 성공 정리는 초안을 건드리지 않는다
   })
 
   it('답장 상태에서 첨부를 보내면 답장을 해제한다', async () => {
@@ -218,19 +293,21 @@ describe('드래그앤드롭 첨부', () => {
     expect(screen.queryByText('여러 파일 중 첫 번째만 첨부됩니다.')).toBeNull()
   })
 
-  it('업로드 중에는 드롭을 무시한다', async () => {
+  it('업로드 중에도 드롭으로 다음 초안의 파일을 고를 수 있고 완료가 그 파일을 지우지 않는다', async () => {
     let resolveFetch!: (v: Response) => void
     const fn = vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve }))
-    renderComposer(fn)
+    const qc = renderComposer(fn)
     const composer = screen.getByTestId('composer')
     await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt'))
     await userEvent.click(screen.getByText('보내기'))
     await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    expect(screen.queryByText(/a\.txt/)).toBeNull() // 제출 시점에 초안에서 떼어냈다
     const other = new File(['y'], 'other.png', { type: 'image/png' })
     fireEvent.drop(composer, { dataTransfer: { files: [other], types: ['Files'] } })
-    expect(screen.getByText(/a\.txt/)).toBeTruthy()
-    expect(screen.queryByText(/other\.png/)).toBeNull()
+    expect(screen.getByText(/other\.png/)).toBeTruthy()
     resolveFetch(new Response(JSON.stringify(msg({ id: 'up9' })), { status: 201, headers: { 'content-type': 'application/json' } }))
+    await waitFor(() => expect(cachedIds(qc)).toEqual(['up9'])) // 성공 콜백이 끝난 뒤에 초안을 검사한다
+    expect(screen.getByText(/other\.png/)).toBeTruthy()
   })
 })
 
