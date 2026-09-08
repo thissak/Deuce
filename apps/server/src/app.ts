@@ -84,7 +84,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   })
 
   setupRealtime(app, config)
-  await app.register(agentManagementRoutes, { prefix: '/api' })
+  await app.register(agentManagementRoutes, { prefix: '/api', config })
   await app.register(agentAccessRoutes, { prefix: '/api/agent', config, storage: new LocalDiskStorage(config.uploadDir) })
   await app.register(mcpRoutes, { config })
   await app.register(presenceRoutes, { prefix: '/api' })

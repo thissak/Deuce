@@ -40,6 +40,7 @@ model Conversation {
   embedKey   String?          @unique // 임베드 모듈용, 계획 ⑥에서 사용
   createdAt  DateTime         @default(now())
   agents     AgentConnection[]
+  agentExclusions AgentConversationExclusion[]
   members    ConversationMember[]
   messages   Message[]
   readStates ReadState[]
@@ -122,18 +123,35 @@ model Mention {
   @@index([mentionedUserId, createdAt])
 }
 
-// 1차 MVP: 채널별 에이전트 신원·회수 가능한 연결 키. 토큰 원문은 저장하지 않는다.
+enum AgentScope {
+  CHANNELS
+  ALL
+}
+
+// conversationId가 있으면 기존 방 전용 연결. 개인 연결은 사람 멤버십에서 접근권한을 계산한다.
 model AgentConnection {
   id             String @id @default(uuid())
-  conversationId String
+  conversationId String?
+  scope          AgentScope @default(CHANNELS)
   ownerId        String
   userId         String @unique
   tokenHash      String @unique
   createdAt      DateTime @default(now())
   expiresAt      DateTime
   revokedAt      DateTime?
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   owner          User @relation("AgentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   user           User @relation("AgentUser", fields: [userId], references: [id], onDelete: Cascade)
+  exclusions     AgentConversationExclusion[]
+  @@index([conversationId])
+  @@index([ownerId])
+}
+
+model AgentConversationExclusion {
+  agentId        String
+  conversationId String
+  agent          AgentConnection @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@id([agentId, conversationId])
   @@index([conversationId])
 }

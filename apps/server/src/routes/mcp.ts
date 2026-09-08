@@ -15,8 +15,8 @@ export const mcpRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (app, 
       return reply.code(403).send({ error: 'invalid origin' })
     const agent = await authenticateAgent(req.headers.authorization, config)
     if (!agent) return reply.header('www-authenticate', 'Bearer realm="deuce"').code(401).send({ error: 'invalid agent credential' })
-    identities.set(req, agent.agentId)
-    req.log.info({ event: 'mcp.access', agentId: agent.agentId, conversationId: agent.conversationId }, 'MCP access')
+    identities.set(req, agent.id)
+    req.log.info({ event: 'mcp.access', agentId: agent.id, conversationId: agent.conversationId }, 'MCP access')
   })
   await app.register(rateLimit, { global: false })
   app.route({ method: ['POST', 'GET', 'DELETE'], url: '/mcp', bodyLimit: 64 * 1024,
