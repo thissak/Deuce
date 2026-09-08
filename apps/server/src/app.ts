@@ -20,6 +20,8 @@ import { agentManagementRoutes, agentAccessRoutes } from './routes/agents.js'
 import { diagnosticRoutes } from './routes/diagnostics.js'
 import { desktopAuthRoutes } from './auth/desktop.js'
 import { mcpRoutes } from './routes/mcp.js'
+import { setupAgentRuntime } from './realtime/agent-runtime.js'
+import { agentRunRoutes } from './routes/agent-runs.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -74,7 +76,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
 
   await app.register(userRoutes, { prefix: '/api' })
   await app.register(conversationRoutes, { prefix: '/api' })
-  await app.register(messageRoutes, { prefix: '/api' })
+  await app.register(messageRoutes, { prefix: '/api', config })
   await app.register(searchRoutes, { prefix: '/api' })
   await app.register(activityRoutes, { prefix: '/api' })
   await app.register(diagnosticRoutes, { prefix: '/api' })
@@ -84,6 +86,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   })
 
   setupRealtime(app, config)
+  setupAgentRuntime(app, config, new LocalDiskStorage(config.uploadDir))
+  await app.register(agentRunRoutes, { prefix: '/api', config })
   await app.register(agentManagementRoutes, { prefix: '/api', config })
   await app.register(agentAccessRoutes, { prefix: '/api/agent', config, storage: new LocalDiskStorage(config.uploadDir) })
   await app.register(mcpRoutes, { config })

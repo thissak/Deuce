@@ -23,6 +23,7 @@ export function toMessageDto(m: MessageWithRels): MessageDto {
     conversationId: m.conversationId,
     author: toUserDto(m.author),
     body: m.deletedAt ? '' : m.body,
+    ...(m.system ? { system: true } : {}),
     deleted: m.deletedAt !== null,
     replyTo: m.replyTo
       ? {

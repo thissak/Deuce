@@ -1,0 +1,1 @@
+ALTER TYPE "AgentScope" ADD VALUE 'SELECTED';

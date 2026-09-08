@@ -1,15 +1,19 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { Prisma, type AgentConnection } from '@prisma/client'
 import { z } from 'zod'
 import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
 import { requestTrace } from '../observability.js'
+import { agentConversationWhere, isAgentActive } from '../domain/agents.js'
+import type { AppConfig } from '../config.js'
 
 const PostSchema = z.object({
   body: z.string().min(1).max(4000),
   replyToId: z.string().optional(),
   mentions: z.array(z.string()).max(20).default([]),
+  clientMessageId: z.string().uuid().optional(),
 })
 
 const ListQuerySchema = z.object({
@@ -23,7 +27,7 @@ async function memberMessage(messageId: string, userId: string) {
   return (await isMember(msg.conversationId, userId)) ? msg : null
 }
 
-export const messageRoutes: FastifyPluginAsync = async (app) => {
+export const messageRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (app, { config }) => {
   app.addHook('preHandler', app.authenticate)
 
   app.post('/conversations/:id/messages', async (req, reply) => {
@@ -33,25 +37,54 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     const parsed = PostSchema.safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     const { body, replyToId, mentions } = parsed.data
+    const previous = parsed.data.clientMessageId ? await prisma.message.findUnique({ where: { id: parsed.data.clientMessageId }, include: messageInclude }) : null
+    if (previous) {
+      if (previous.authorId !== me || previous.conversationId !== id || previous.body !== body || previous.replyToId !== (replyToId ?? null))
+        return reply.code(409).send({ error: 'message id already used' })
+      return reply.code(201).send(toMessageDto(previous))
+    }
     if (replyToId) {
       const target = await prisma.message.findUnique({ where: { id: replyToId } })
       if (!target || target.conversationId !== id)
         return reply.code(400).send({ error: 'invalid replyToId' })
     }
+    const targets: AgentConnection[] = []
     for (const uid of new Set(mentions)) {
-      if (!(await isMember(id, uid)))
-        return reply.code(400).send({ error: 'mention must be a member' })
+      const a = await prisma.agentConnection.findUnique({ where: { userId: uid }, include: { owner: true } })
+      if (a && !a.conversationId) {
+        if (!isAgentActive(a, config) || !await prisma.conversation.count({ where: { AND: [{ id }, agentConversationWhere(a)] } }))
+          return reply.code(400).send({ error: 'AI is not participating' })
+        targets.push(a)
+      } else if (!(await isMember(id, uid))) return reply.code(400).send({ error: 'mention must be a member' })
     }
-    const created = await prisma.message.create({
-      data: {
-        conversationId: id,
-        authorId: me,
-        body,
-        replyToId: replyToId ?? null,
-        mentions: { create: [...new Set(mentions)].map((mentionedUserId) => ({ mentionedUserId })) },
-      },
-      include: messageInclude,
-    })
+    if (targets.length > 1) return reply.code(400).send({ error: 'mention one AI per request' })
+    const target = targets[0]
+    if (target && app.agentRuntime.status(target.id) !== 'READY') return reply.code(409).send({ error: 'AI is offline or busy' })
+    if (target) await app.agentRuntime.expire({ agentId: target.id })
+    let saved
+    try {
+      saved = await prisma.$transaction(async (tx) => {
+        const created = await tx.message.create({
+          data: {
+            id: parsed.data.clientMessageId,
+            conversationId: id,
+            authorId: me,
+            body,
+            replyToId: replyToId ?? null,
+            mentions: { create: [...new Set(mentions)].map((mentionedUserId) => ({ mentionedUserId })) },
+          },
+          include: messageInclude,
+        })
+        const run = target ? await tx.agentRun.create({ data: { id: created.id, agentId: target.id, conversationId: id,
+          requestedById: me, prompt: body, questionMessageId: created.id } }) : null
+        return { created, run }
+      })
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return reply.code(409).send({ error: 'request already in progress' })
+      throw e
+    }
+    const { created, run } = saved
+    if (run) app.agentRuntime.start(run)
     const dto = toMessageDto(created)
     const trace = requestTrace.getStore()
     if (trace) trace.messageId = created.id
@@ -100,6 +133,7 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
     if (msg.authorId !== req.currentUser.id) return reply.code(403).send({ error: 'author only' })
+    if (msg.system) return reply.code(403).send({ error: 'system message' })
     if (msg.deletedAt) return reply.code(400).send({ error: 'message deleted' })
     const parsed = z.object({ body: z.string().min(1).max(4000) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
@@ -118,6 +152,7 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
     const msg = await memberMessage(id, req.currentUser.id)
     if (!msg) return reply.code(404).send({ error: 'message not found' })
     if (msg.authorId !== req.currentUser.id) return reply.code(403).send({ error: 'author only' })
+    if (msg.system) return reply.code(403).send({ error: 'system message' })
     await prisma.message.update({ where: { id }, data: { deletedAt: new Date() } })
     const masked = await prisma.message.findUniqueOrThrow({ where: { id }, include: messageInclude })
     app.io.to(`convo:${masked.conversationId}`).emit(RT.messageDeleted, toMessageDto(masked))

@@ -62,7 +62,7 @@ export const agentAccessRoutes: FastifyPluginAsync<{ config: AppConfig; storage:
     const c = await context(id)
     if (!c) return reply.code(404).send({ error: 'conversation not found' })
     // AI에 다른 사용자의 이메일은 제공하지 않는다.
-    const agents = (await getConversationAgents(id, a.ownerId, opts.config)).filter((agent) => agent.participating)
+    const agents = (await getConversationAgents(id, a.ownerId, opts.config, app.agentRuntime)).filter((agent) => agent.participating)
     return { ...view(c, a), agentId: a.id,
       members: [
         ...c.members.filter((m) => !m.user.isAgent).map(({ user: u }) => ({ id: u.id, name: u.name, isAgent: false })),
