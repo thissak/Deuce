@@ -7,6 +7,7 @@ export const MessageDtoSchema = z.object({
   conversationId: z.string(),
   author: UserDtoSchema,
   body: z.string(),
+  system: z.boolean().optional(),
   deleted: z.boolean(),
   replyTo: z
     .object({ id: z.string(), body: z.string(), authorName: z.string(), deleted: z.boolean() })

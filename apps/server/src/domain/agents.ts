@@ -17,7 +17,9 @@ export function agentConversationWhere(a: AgentConnection): Prisma.ConversationW
       { members: { some: { userId: a.ownerId, user: { isAgent: false } } } },
       a.conversationId
         ? { id: a.conversationId, members: { some: { userId: a.userId } } }
-        : { ...(a.scope === 'CHANNELS' ? { type: 'CHANNEL' as const } : {}), agentExclusions: { none: { agentId: a.id } } },
+        : { ...(a.scope === 'CHANNELS' ? { type: 'CHANNEL' as const } : {}),
+            ...(a.scope === 'SELECTED' ? { agentGrants: { some: { agentId: a.id } } } : {}),
+            agentExclusions: { none: { agentId: a.id } } },
     ],
   }
 }
@@ -28,5 +30,7 @@ export async function authenticateAgent(authorization: string | undefined, confi
   const a = await prisma.agentConnection.findUnique({ where: { tokenHash: hashAgentToken(token) }, include: { owner: true } })
   if (!a || !isAgentActive(a, config)) return null
   if (a.conversationId && !await prisma.conversation.count({ where: agentConversationWhere(a) })) return null
+  if (!a.lastConnectedAt || Date.now() - a.lastConnectedAt.getTime() > 30_000)
+    await prisma.agentConnection.update({ where: { id: a.id }, data: { lastConnectedAt: new Date() } })
   return a
 }
