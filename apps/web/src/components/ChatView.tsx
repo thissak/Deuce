@@ -78,7 +78,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           >
             {c.mutedAt ? '🔕' : '🔔'}
           </button>
-          {c.type === 'CHANNEL' && <button className="btn-plain" onClick={() => setShowAgents(true)}>AI 연결</button>}
+          <button className="btn-plain" onClick={() => setShowAgents(true)}>AI 연결</button>
           {c.type !== 'DM' && (
             <button className="icon-btn" title="그룹 설정" onClick={() => setShowSettings(true)}>⚙️</button>
           )}
