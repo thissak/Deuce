@@ -4,7 +4,7 @@ import { MessageDtoSchema } from './message.js'
 
 export const ConversationSummarySchema = z.object({
   id: z.string(),
-  type: z.enum(['DM', 'GROUP']),
+  type: z.enum(['DM', 'GROUP', 'CHANNEL']),
   title: z.string().nullable(),
   displayName: z.string(),
   members: z.array(UserDtoSchema),

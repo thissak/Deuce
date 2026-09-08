@@ -155,3 +155,4 @@ a { color: #5b5fc7; text-decoration: none; }
 .diagnostics-panel { position: fixed; top: 12px; right: 12px; z-index: 1000; max-width: min(380px, calc(100vw - 24px)); padding: 12px; background: #fff; color: #222; border: 1px solid #777; border-radius: 8px; box-shadow: 0 3px 14px #0003; font-size: 13px; }
 .diagnostics-panel button { margin: 4px; }
 .diagnostics-panel code { overflow-wrap: anywhere; }
+.agent-badge{font-size:10px;border:1px solid #7676b9;border-radius:4px;padding:1px 4px;color:#5858a8}.agent-settings{max-height:85vh;overflow:auto}.agent-settings p{line-height:1.6;font-size:13px}.agent-settings label{display:flex;gap:8px;align-items:center;margin-bottom:10px}

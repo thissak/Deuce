@@ -16,7 +16,9 @@ import { LocalDiskStorage } from './storage.js'
 import { setupRealtime } from './realtime/io.js'
 import { randomUUID } from 'node:crypto'
 import { logSerializers, setupObservability } from './observability.js'
+import { agentManagementRoutes, agentAccessRoutes } from './routes/agents.js'
 import { diagnosticRoutes } from './routes/diagnostics.js'
+import { mcpRoutes } from './routes/mcp.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -79,6 +81,9 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   })
 
   setupRealtime(app, config)
+  await app.register(agentManagementRoutes, { prefix: '/api' })
+  await app.register(agentAccessRoutes, { prefix: '/api/agent', config, storage: new LocalDiskStorage(config.uploadDir) })
+  await app.register(mcpRoutes, { config })
   await app.register(presenceRoutes, { prefix: '/api' })
 
   return app

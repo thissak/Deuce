@@ -30,7 +30,7 @@ export const authPlugin = fp<AuthPluginOptions>(async (app, opts) => {
     if (!userId) return reply.code(401).send({ error: 'unauthorized' })
     const user = await prisma.user.findUnique({ where: { id: userId } })
     // 허용목록 매 요청 재검사 — 목록에서 빠지면 즉시 차단 (세션 회수 대체)
-    if (!user || !opts.config.allowedEmails.includes(user.email)) {
+    if (!user || user.isAgent || !opts.config.allowedEmails.includes(user.email)) {
       req.session.delete()
       return reply.code(401).send({ error: 'unauthorized' })
     }

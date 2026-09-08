@@ -82,6 +82,7 @@ export function MessageBubble({
       <div className="msg-main">
         <div className="msg-meta">
           {!isMine && <span className="msg-author">{m.author.name}</span>}
+          {m.author.isAgent && <span className="agent-badge">AI</span>}
           <span>{formatTime(m.createdAt)}</span>
           {m.editedAt && !m.deleted && <span className="edited-mark">(수정됨)</span>}
           {m.pinnedAt && !m.deleted && <span className="pin-mark">📌 고정됨</span>}

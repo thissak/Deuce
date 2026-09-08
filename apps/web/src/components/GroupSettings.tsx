@@ -66,7 +66,7 @@ export function GroupSettings({ me, detail, onClose }: { me: UserDto; detail: Co
                 <span className="avatar">{u.name.slice(0, 1)}</span>
                 <PresenceDot userId={u.id} />
               </span>
-              <span style={{ flex: 1 }}>{u.name}{u.id === me.id ? ' (나)' : ''}</span>
+              <span style={{ flex: 1 }}>{u.name}{u.isAgent ? ' · AI' : ''}{u.id === me.id ? ' (나)' : ''}</span>
               {u.id !== me.id && (
                 <button className="btn-plain" disabled={removeMember.isPending} onClick={() => removeMember.mutate(u.id)}>제거</button>
               )}

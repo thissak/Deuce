@@ -6,7 +6,7 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm --parallel --filter @deuce/server --filter @deuce/web dev",
-    "build": "pnpm --filter @deuce/web build"
+    "build": "pnpm --filter @deuce/web build && pnpm --filter @deuce/mcp build"
   },
   "engines": {
     "node": ">=24 <27"

@@ -6,7 +6,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate)
 
   app.get('/users', async () => {
-    const users = await prisma.user.findMany({ orderBy: { name: 'asc' } })
+    const users = await prisma.user.findMany({ where: { isAgent: false }, orderBy: { name: 'asc' } })
     return users.map(toUserDto)
   })
 }

@@ -15,6 +15,9 @@ model User {
   name        String
   avatarUrl   String?
   createdAt   DateTime @default(now())
+  isAgent     Boolean  @default(false)
+  ownedAgents AgentConnection[] @relation("AgentOwner")
+  agentConnection AgentConnection? @relation("AgentUser")
   memberships ConversationMember[]
   messages    Message[]
   reactions   Reaction[]
@@ -22,7 +25,7 @@ model User {
   mentions    Mention[]
 }
 
-// CHANNEL은 v2 팀/채널 확장용 예약값 — v1에서는 DM·GROUP만 생성한다
+// CHANNEL은 초대된 구성원이 참여하는 채팅 채널이다.
 enum ConversationType {
   DM
   GROUP
@@ -35,6 +38,7 @@ model Conversation {
   title      String?          // DM은 null, 그룹은 방 이름
   embedKey   String?          @unique // 임베드 모듈용, 계획 ⑥에서 사용
   createdAt  DateTime         @default(now())
+  agents     AgentConnection[]
   members    ConversationMember[]
   messages   Message[]
   readStates ReadState[]
@@ -115,4 +119,20 @@ model Mention {
   mentioned       User    @relation(fields: [mentionedUserId], references: [id], onDelete: Cascade)
 
   @@index([mentionedUserId, createdAt])
+}
+
+// 1차 MVP: 채널별 에이전트 신원·회수 가능한 연결 키. 토큰 원문은 저장하지 않는다.
+model AgentConnection {
+  id             String @id @default(uuid())
+  conversationId String
+  ownerId        String
+  userId         String @unique
+  tokenHash      String @unique
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  owner          User @relation("AgentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  user           User @relation("AgentUser", fields: [userId], references: [id], onDelete: Cascade)
+  @@index([conversationId])
 }

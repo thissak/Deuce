@@ -8,9 +8,9 @@ import { messageInclude, toMessageDto } from '../serializers.js'
 const CreateSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('dm'), otherUserId: z.string() }),
   z.object({
-    type: z.literal('group'),
+    type: z.enum(['group', 'channel']),
     title: z.string().min(1).max(100),
-    memberIds: z.array(z.string()).min(1).max(50),
+    memberIds: z.array(z.string()).max(50),
   }),
 ])
 
@@ -33,7 +33,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       const { otherUserId } = parsed.data
       if (otherUserId === me) return reply.code(400).send({ error: 'cannot dm yourself' })
       const other = await prisma.user.findUnique({ where: { id: otherUserId } })
-      if (!other) return reply.code(404).send({ error: 'user not found' })
+      if (!other || other.isAgent) return reply.code(404).send({ error: 'user not found' })
       const existing = await prisma.conversation.findFirst({
         where: {
           type: 'DM',
@@ -51,12 +51,13 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send(await summarizeConversation(convo.id, me))
     }
 
+    if (parsed.data.type === 'group' && parsed.data.memberIds.length === 0) return reply.code(400).send({ error: 'member required' })
     const memberIds = [...new Set([me, ...parsed.data.memberIds])]
-    const found = await prisma.user.count({ where: { id: { in: memberIds } } })
+    const found = await prisma.user.count({ where: { id: { in: memberIds }, isAgent: false } })
     if (found !== memberIds.length) return reply.code(404).send({ error: 'user not found' })
     const convo = await prisma.conversation.create({
       data: {
-        type: 'GROUP',
+        type: parsed.data.type === 'channel' ? 'CHANNEL' : 'GROUP',
         title: parsed.data.title,
         members: { create: memberIds.map((userId) => ({ userId })) },
       },
@@ -95,7 +96,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const me = req.currentUser.id
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
-    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
     const parsed = z.object({ title: z.string().min(1).max(100) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     await prisma.conversation.update({ where: { id }, data: { title: parsed.data.title } })
@@ -108,11 +109,11 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const me = req.currentUser.id
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
-    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
     const parsed = z.object({ userIds: z.array(z.string()).min(1).max(50) }).safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' })
     const userIds = [...new Set(parsed.data.userIds)]
-    const found = await prisma.user.count({ where: { id: { in: userIds } } })
+    const found = await prisma.user.count({ where: { id: { in: userIds }, isAgent: false } })
     if (found !== userIds.length) return reply.code(404).send({ error: 'user not found' })
     await prisma.conversationMember.createMany({
       data: userIds.map((userId) => ({ conversationId: id, userId })),
@@ -128,7 +129,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const me = req.currentUser.id
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
-    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
     await prisma.conversationMember.delete({
       where: { conversationId_userId: { conversationId: id, userId: me } },
     })
@@ -143,7 +144,7 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     const me = req.currentUser.id
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
-    if (convo.type !== 'GROUP') return reply.code(400).send({ error: 'group only' })
+    if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
     if (!(await isMember(id, userId))) return reply.code(404).send({ error: 'member not found' })
     // ReadState는 남긴다 — 재가입 시 부재 기간 메시지를 안 읽음으로 보이게 하는 의도된 정책
     await prisma.conversationMember.delete({
