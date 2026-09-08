@@ -22,7 +22,7 @@ export function AgentSettings({ conversationId, onClose }: { conversationId: str
   return <div className="dialog-backdrop" onClick={onClose}>
     <div className="dialog agent-settings" role="dialog" aria-modal="true" aria-label="AI 연결" onClick={(e) => e.stopPropagation()}>
       <h3>이 대화의 에이전트</h3>
-      <p>참여 중인 AI는 이 방의 대화와 첨부를 읽고 자신의 이름으로 답할 수 있습니다. 외부 AI 앱에서 요청할 때 동작합니다.</p>
+      <p>참여 중인 AI는 이 방의 대화와 첨부를 읽고 자신의 이름으로 답할 수 있습니다. PC 실행기가 연결되어 있으면 채팅에서 @AI로 요청할 수 있습니다.</p>
       <button onClick={() => setShowMine(true)}>내 에이전트 설정</button>
       {agents.isPending && <p>에이전트를 불러오는 중입니다.</p>}
       {agents.isError && <ErrorNotice message="연결 목록을 불러오지 못했습니다." onRetry={() => void agents.refetch()} />}
@@ -36,7 +36,7 @@ export function AgentSettings({ conversationId, onClose }: { conversationId: str
             ? <button disabled={revoke.isPending} onClick={() => revoke.mutate(a.id)}>연결 해제</button>
             : a.scopeAllows
               ? <button disabled={change.isPending} onClick={() => change.mutate({ id: a.id, excluded: !a.excluded })}>{a.excluded ? '참여시키기' : '이 대화에서 해제'}</button>
-              : <span>채널만 참여하도록 설정되어 있습니다. 내 에이전트 설정에서 모든 대화 참여를 선택하세요.</span>)}
+              : <span>채널만 참여하도록 설정되어 있습니다. 내 에이전트 설정에서 ‘초대한 방만 참여’로 바꾸면 이 방에 초대할 수 있습니다.</span>)}
         </li>
       })}</ul>
       <div className="dialog-actions"><button onClick={onClose}>닫기</button></div>

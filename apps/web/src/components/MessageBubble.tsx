@@ -76,6 +76,8 @@ export function MessageBubble({
     setEditing(true)
   }
 
+  if (m.system) return <div id={`msg-${m.id}`} className="agent-system-message">{m.body}</div>
+
   return (
     <div id={`msg-${m.id}`} className={`msg-row ${isMine ? 'mine' : ''}`}>
       {!isMine && <span className="avatar">{m.author.name.slice(0, 1)}</span>}

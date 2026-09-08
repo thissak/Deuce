@@ -11,7 +11,7 @@ import { beginSubmission, diagnosticFetch, record } from '../diagnostics/recorde
 const MAX_FILE_BYTES = 26214400 // 서버 MAX_UPLOAD_BYTES 기본값과 동일 (25MiB)
 
 /** 전송 단위. 제출 때 초안에서 떼어낸 뒤로는 outgoing mutation만 소유한다 — 실패하면 variables로 남아 재전송·버리기의 대상이 된다 */
-type Outgoing = { body: string; file: File | null; replyToId?: string; mentions: string[]; traceId?: string }
+type Outgoing = { body: string; file: File | null; replyToId?: string; mentions: string[]; traceId?: string; clientMessageId?: string }
 
 export function Composer({
   me,
@@ -143,6 +143,7 @@ export function Composer({
             body: o.body,
             replyToId: o.replyToId,
             mentions: o.mentions,
+            ...(o.clientMessageId ? { clientMessageId: o.clientMessageId } : {}),
           }, o.traceId),
         )
       }
@@ -180,7 +181,10 @@ export function Composer({
     const body = text.trim()
     if (!file && body.length === 0) return
     // JSON 요청에 필요한 값은 여기서 모두 확정한다 — 재전송도 같은 payload를 보낸다
-    outgoing.mutate({ body, file, replyToId: replyTo?.id, mentions: collectMentionIds(body, members), traceId: beginSubmission() }) // 파일이 있으면 캡션은 비어도 된다
+    const mentions = collectMentionIds(body, members)
+    const aiMentioned = members.some(u => u.isAgent && mentions.includes(u.id))
+    if (aiMentioned && file) { setFileError('자료를 먼저 올린 뒤, 별도 메시지에서 AI에게 요청해 주세요.'); return }
+    outgoing.mutate({ body, file, replyToId: replyTo?.id, mentions, traceId: beginSubmission(), ...(aiMentioned ? { clientMessageId: crypto.randomUUID() } : {}) }) // AI 요청의 실패 재전송은 같은 ID를 유지한다.
     // 초안을 즉시 비운다 — 응답을 기다리며 쓰는 글·고르는 파일·답장은 다음 초안의 것 (실 Chrome에서 확인)
     setText('')
     setFile(null)
