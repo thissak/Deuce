@@ -9,7 +9,7 @@
 | 앱 / 터널 | deuce.service / cloudflared-deuce.service |
 | 내부 포트 | 127.0.0.1:4010 |
 | 런타임 | /opt/deuce/node (Node 24.20.0), pnpm 11.24.0 |
-| 릴리스 | /opt/deuce/releases/20260908-02 |
+| 릴리스 | /opt/deuce/releases/20260908-03 |
 | 현재 링크 | /opt/deuce/current |
 | 비밀 설정 | /etc/deuce/deuce.env (root 전용 0600) |
 | PostgreSQL | 기존 17.10, DB deuce, 역할 deuce |
@@ -20,7 +20,9 @@
 
 ## 현재 검증과 남은 작업
 
-- 최신 `20260908-02`: 공식 Desktop OAuth·Google sub 계정 연결·앱 다운로드 반영.
+- 최신 `20260908-03`: 개인 AI 초대·PC 실행기와 채팅 UI, 0.2.0 앱 배포. migration 4→8 기존 데이터 보존, VM 서버 94개와 실제 Mac 업데이트·AI 답변/복구 통과. [배포 결과](2026-09-08-ai-invite-release.md).
+
+- 이전 `20260908-02`: 공식 Desktop OAuth·Google sub 계정 연결·앱 다운로드 반영.
   로컬/VM 서버 각 81개·실제 Mac 로그인·0.1.1 서명/공증/배포 완료.
   상세: `2026-09-08-desktop-native-oauth.md`, `2026-09-08-desktop-receipt.json`.
 
