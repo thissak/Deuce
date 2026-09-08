@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, existsSync, statSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, existsSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -63,4 +63,39 @@ it('마지막 계정 재확인 응답이 로그아웃 뒤 도착해도 즉시 �
   confirm('owner')
   expect(await connecting).toMatchObject({ ok: false })
   expect(existsSync(join(f.options.directory, 'ai-connections.json'))).toBe(false)
+})
+it('이전 계정의 늦은 복구 응답이 새 계정의 실행기를 중단하지 않는다', async () => {
+  const f = fixture()
+  writeFileSync(join(f.options.directory, 'ai-connections.json'), JSON.stringify([
+    { agentId: 'ai', ownerId: 'owner', provider: 'codex', secret: 'encrypted', origin: f.options.origin },
+  ]))
+  let stale!: (user: string | null) => void
+  let reads = 0
+  const agents = desktopAgents({ ...f.options, currentUser: () => {
+    if (++reads === 1) return new Promise<string | null>(resolve => { stale = resolve })
+    return Promise.resolve('owner')
+  } })
+  const previous = agents.restore()
+  agents.stopAll()
+  await agents.restore()
+  expect(connectRunner).toHaveBeenCalledTimes(1)
+  stale('previous-owner')
+  await previous
+  expect(f.stop).not.toHaveBeenCalled()
+  agents.stopAll()
+})
+it('복구 중 로그아웃하면 다음 저장된 AI를 재연결하지 않는다', async () => {
+  const f = fixture()
+  writeFileSync(join(f.options.directory, 'ai-connections.json'), JSON.stringify(['ai','ai-next'].map(agentId =>
+    ({ agentId, ownerId: 'owner', provider: 'codex', secret: 'encrypted', origin: f.options.origin }))))
+  let ready!: (identity: { agentId: string; ownerId: string }) => void
+  vi.mocked(connectRunner).mockReturnValue({ start: () => new Promise(resolve => { ready = resolve }), stop: f.stop })
+  const agents = desktopAgents(f.options)
+  const restoring = agents.restore()
+  await vi.waitFor(() => expect(ready).toBeTypeOf('function'))
+  agents.stopAll()
+  // A stale HTTP response can still report the old owner immediately after logout.
+  ready({ agentId: 'ai', ownerId: 'owner' })
+  await restoring
+  expect(connectRunner).toHaveBeenCalledTimes(1)
 })

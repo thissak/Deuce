@@ -66,11 +66,15 @@ export function desktopAgents(options: {
       return connect(p.agentId, p.token, p.provider as Provider, true)
     },
     async restore() {
+      const requestedGeneration = generation
       const ownerId = await options.currentUser()
+      if (requestedGeneration !== generation) return
       if (activeOwner !== ownerId) stopAll()
       activeOwner = ownerId
       if (!ownerId) return
+      const restoreGeneration = generation
       for (const record of records) {
+        if (restoreGeneration !== generation) return
         if (record.ownerId !== ownerId || record.origin !== options.origin || !['codex', 'claude'].includes(record.provider)) continue
         try { await connect(record.agentId, options.decrypt(record.secret), record.provider, false) } catch { /* Invalid encrypted record: reconnect from settings. */ }
       }

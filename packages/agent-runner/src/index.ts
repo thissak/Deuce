@@ -1,4 +1,4 @@
-import { execFile, type ExecFileOptions } from 'node:child_process'
+import { execa } from 'execa'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir, homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
@@ -16,16 +16,15 @@ export type Task = z.infer<typeof TaskSchema>
 type Execute = (provider: Provider, task: Task, signal: AbortSignal) => Promise<string>
 
 const env = () => ({ ...process.env, PATH: [process.env.PATH, join(homedir(), '.local/bin'), join(homedir(), '.npm-global/bin'), '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean).join(delimiter) })
-function run(binary: string, args: string[], input: string, options: ExecFileOptions): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = execFile(binary, args, { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024, env: env(), ...options }, (error, stdout) => {
-      // Raw provider output can include personal configuration details. Do not log it.
-      if (error) reject(new Error(error.code === 'ENOENT' ? 'CLI_NOT_FOUND' : 'AI_EXECUTION_FAILED'))
-      else resolve(String(stdout))
-    })
-    child.stdin?.on('error', () => {})
-    child.stdin?.end(input)
-  })
+async function run(binary: string, args: string[], input: string, options: { cwd?: string; timeout: number; signal?: AbortSignal }): Promise<string> {
+  try {
+    const { stdout } = await execa(binary, args, { env: env(), input, maxBuffer: 2 * 1024 * 1024,
+      cwd: options.cwd, timeout: options.timeout, cancelSignal: options.signal, killDescendants: true, windowsHide: true })
+    return stdout
+  } catch (error) {
+    // Raw provider output can include personal configuration details. Do not log it.
+    throw new Error((error as { code?: string }).code === 'ENOENT' ? 'CLI_NOT_FOUND' : 'AI_EXECUTION_FAILED')
+  }
 }
 export async function checkProvider(provider: Provider) {
   await run(provider, provider === 'codex' ? ['login', 'status'] : ['auth', 'status'], '', { timeout: 15_000 })
