@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { LogController, type FastifyInstance } from 'fastify'
 import secureSession from '@fastify/secure-session'
 import multipart from '@fastify/multipart'
 import { loadConfig, type AppConfig } from './config.js'
@@ -14,6 +14,9 @@ import { presenceRoutes } from './routes/presence.js'
 import { attachmentRoutes } from './routes/attachments.js'
 import { LocalDiskStorage } from './storage.js'
 import { setupRealtime } from './realtime/io.js'
+import { randomUUID } from 'node:crypto'
+import { logSerializers, setupObservability } from './observability.js'
+import { diagnosticRoutes } from './routes/diagnostics.js'
 
 export interface AppOptions {
   config?: AppConfig
@@ -24,11 +27,14 @@ export interface AppOptions {
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
   const config = opts.config ?? loadConfig()
   const app = Fastify({
-    logger: process.env.NODE_ENV !== 'test',
+    logger: process.env.NODE_ENV === 'test' ? false : { serializers: logSerializers },
+    genReqId: () => randomUUID(),
+    logController: new LogController({ disableRequestLogging: true }),
     // 테스트에서 keep-alive 소켓이 idle로 표시되기 직전에 app.close()가 호출되면
     // 레이스로 종료가 멈출 수 있다 (Fastify 기본값 'idle'은 idle 소켓만 정리).
     forceCloseConnections: process.env.NODE_ENV === 'test' ? true : 'idle',
   })
+  setupObservability(app)
 
   await app.register(secureSession, {
     key: config.sessionKey,
@@ -53,7 +59,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     const error = err instanceof Error ? err : new Error(String(err))
     const status = (err as any)?.statusCode ?? 500
     if (status < 500) return reply.code(status).send({ error: error.message })
-    req.log.error(error)
+    req.log.error({ err: error }, 'request failed')
     return reply.code(500).send({ error: 'internal error' })
   })
 
@@ -66,6 +72,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(messageRoutes, { prefix: '/api' })
   await app.register(searchRoutes, { prefix: '/api' })
   await app.register(activityRoutes, { prefix: '/api' })
+  await app.register(diagnosticRoutes, { prefix: '/api' })
   await app.register(attachmentRoutes, {
     prefix: '/api',
     storage: new LocalDiskStorage(config.uploadDir),

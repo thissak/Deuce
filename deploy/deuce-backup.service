@@ -1,0 +1,12 @@
+[Unit]
+Description=Deuce DB and attachments backup to GCS
+After=postgresql.service network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/deuce/backup.env
+ExecStart=/usr/local/bin/deuce-backup.sh
+UMask=0077
+Nice=10
+IOSchedulingClass=idle

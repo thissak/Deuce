@@ -1,0 +1,8 @@
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_ID.json
+no-autoupdate: true
+metrics: 127.0.0.1:20242
+ingress:
+  - hostname: chat.example.com
+    service: http://127.0.0.1:4010
+  - service: http_status:404

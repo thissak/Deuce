@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Deuce backup
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 Asia/Seoul
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

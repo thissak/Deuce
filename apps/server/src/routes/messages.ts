@@ -4,6 +4,7 @@ import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
+import { requestTrace } from '../observability.js'
 
 const PostSchema = z.object({
   body: z.string().min(1).max(4000),
@@ -52,7 +53,11 @@ export const messageRoutes: FastifyPluginAsync = async (app) => {
       include: messageInclude,
     })
     const dto = toMessageDto(created)
+    const trace = requestTrace.getStore()
+    if (trace) trace.messageId = created.id
+    req.log.info({ event: 'message.persisted', traceId: trace?.traceId, messageId: created.id }, 'message persisted')
     app.io.to(`convo:${id}`).emit(RT.messageNew, dto)
+    req.log.info({ event: 'message.emitted', traceId: trace?.traceId, messageId: created.id }, 'message emitted')
     return reply.code(201).send(dto)
   })
 

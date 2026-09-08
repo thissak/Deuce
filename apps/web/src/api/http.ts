@@ -1,3 +1,6 @@
+import { diagnosticFetch, record } from '../diagnostics/recorder'
+import { diagnosticRoute } from '@deuce/shared'
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -8,8 +11,8 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { credentials: 'same-origin', ...init })
+export async function api<T = unknown>(path: string, init?: RequestInit, traceId?: string): Promise<T> {
+  const res = await diagnosticFetch(path, { credentials: 'same-origin', ...init }, traceId)
   if (!res.ok) {
     let message = res.statusText
     try {
@@ -21,13 +24,17 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
     throw new ApiError(res.status, message)
   }
   if (res.status === 204) return undefined as T
-  return (await res.json()) as T
+  const data = await res.json()
+  record('http.body', { traceId: res.headers?.get('x-deuce-trace-id') ?? traceId,
+    requestId: res.headers?.get('x-request-id') ?? undefined, route: diagnosticRoute(path), status: res.status,
+    ...(path.includes('/messages') && typeof data?.id === 'string' ? { messageId: data.id } : {}) })
+  return data as T
 }
 
-export function apiJson<T = unknown>(method: string, path: string, body: unknown): Promise<T> {
+export function apiJson<T = unknown>(method: string, path: string, body: unknown, traceId?: string): Promise<T> {
   return api<T>(path, {
     method,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
-  })
+  }, traceId)
 }

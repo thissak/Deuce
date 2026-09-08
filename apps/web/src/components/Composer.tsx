@@ -6,11 +6,12 @@ import { messagesKey, sharedKey } from '../api/queries'
 import { formatBytes, isImage } from '../lib/format'
 import { collectMentionIds, mentionQueryAt } from '../lib/mentions'
 import { appendMessage, type MessagesData } from '../realtime/cache'
+import { beginSubmission, diagnosticFetch, record } from '../diagnostics/recorder'
 
 const MAX_FILE_BYTES = 26214400 // 서버 MAX_UPLOAD_BYTES 기본값과 동일 (25MiB)
 
 /** 전송 단위. 제출 때 초안에서 떼어낸 뒤로는 outgoing mutation만 소유한다 — 실패하면 variables로 남아 재전송·버리기의 대상이 된다 */
-type Outgoing = { body: string; file: File | null; replyToId?: string; mentions: string[] }
+type Outgoing = { body: string; file: File | null; replyToId?: string; mentions: string[]; traceId?: string }
 
 export function Composer({
   me,
@@ -134,27 +135,30 @@ export function Composer({
             body: o.body,
             replyToId: o.replyToId,
             mentions: o.mentions,
-          }),
+          }, o.traceId),
         )
       }
       // 첨부는 multipart 전용 엔드포인트 — 캡션은 body 필드로 함께 올린다 (T1 계약). 답장은 포함하지 않는다
       const fd = new FormData()
       fd.append('file', o.file)
       fd.append('body', o.body)
-      const res = await fetch(`/api/conversations/${conversationId}/attachments`, {
+      const res = await diagnosticFetch(`/api/conversations/${conversationId}/attachments`, {
         method: 'POST',
         credentials: 'same-origin',
         body: fd,
-      })
+      }, o.traceId)
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string }
         throw new ApiError(res.status, body.error ?? res.statusText)
       }
-      return MessageDtoSchema.parse(await res.json())
+      const message = MessageDtoSchema.parse(await res.json())
+      record('http.body', { traceId: o.traceId, messageId: message.id, route: 'attachments', status: res.status })
+      return message
     },
     // 성공·실패 모두 초안(text·file·답장)은 건드리지 않는다 — 초안은 제출 시점에 이미 비웠다
     onSuccess: (m, o) => {
       qc.setQueryData<MessagesData>(messagesKey(conversationId), (d) => appendMessage(d, m))
+      record('cache.message', { traceId: o.traceId, messageId: m.id })
       if (o.file) void qc.invalidateQueries({ queryKey: sharedKey(conversationId) })
     },
   })
@@ -168,7 +172,7 @@ export function Composer({
     const body = text.trim()
     if (!file && body.length === 0) return
     // JSON 요청에 필요한 값은 여기서 모두 확정한다 — 재전송도 같은 payload를 보낸다
-    outgoing.mutate({ body, file, replyToId: replyTo?.id, mentions: collectMentionIds(body, members) }) // 파일이 있으면 캡션은 비어도 된다
+    outgoing.mutate({ body, file, replyToId: replyTo?.id, mentions: collectMentionIds(body, members), traceId: beginSubmission() }) // 파일이 있으면 캡션은 비어도 된다
     // 초안을 즉시 비운다 — 응답을 기다리며 쓰는 글·고르는 파일·답장은 다음 초안의 것 (실 Chrome에서 확인)
     setText('')
     setFile(null)
@@ -201,7 +205,7 @@ export function Composer({
             {failed.file && `📎 ${failed.file.name}\n`}
             {failed.body}
           </div>
-          <button className="btn-plain" onClick={() => outgoing.mutate(failed)}>
+          <button className="btn-plain" onClick={() => outgoing.mutate({ ...failed, traceId: beginSubmission(true) })}>
             재전송
           </button>
           <button className="btn-plain" onClick={() => outgoing.reset()}>

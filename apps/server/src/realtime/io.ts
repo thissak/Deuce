@@ -19,27 +19,33 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
   const presence = new PresenceTracker()
 
   io.use(async (socket, next) => {
+    const reject = () => {
+      app.log.info({ event: 'socket.rejected', socketId: socket.id }, 'socket unauthorized')
+      return next(new Error('unauthorized'))
+    }
     try {
       const header = socket.handshake.headers.cookie
       const cookies = header ? parseCookie(header) : {}
       const raw = cookies['session']
       const session = raw ? app.decodeSecureSession(raw) : null
       const userId = session?.get('userId')
-      if (!userId) return next(new Error('unauthorized'))
+      if (!userId) return reject()
       const user = await prisma.user.findUnique({ where: { id: userId } })
       if (!user || !config.allowedEmails.includes(user.email)) {
-        return next(new Error('unauthorized'))
+        return reject()
       }
       socket.data.userId = user.id
       return next()
     } catch (err) {
       app.log.debug({ err }, 'socket handshake rejected')
-      return next(new Error('unauthorized'))
+      return reject()
     }
   })
 
   io.on('connection', async (socket) => {
     const userId = socket.data.userId as string
+    const started = performance.now()
+    app.log.info({ event: 'socket.connected', socketId: socket.id, userId, transport: socket.conn.transport.name }, 'socket connected')
 
     // presence 등록·리스너는 room join의 DB 왕복(prisma) 이전에 동기로 붙인다.
     // 그렇지 않으면 클라이언트가 연결 직후 보내는 presence:away 등이
@@ -55,7 +61,8 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
       const change = presence.setActive(userId)
       if (change) io.emit(RT.presenceChanged, { userId, status: change })
     })
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+      app.log.info({ event: 'socket.disconnected', socketId: socket.id, userId, reason }, 'socket disconnected')
       const change = presence.disconnect(userId)
       if (change) io.emit(RT.presenceChanged, { userId, status: change })
     })
@@ -66,8 +73,9 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
       const memberships = await prisma.conversationMember.findMany({ where: { userId } })
       if (socket.disconnected) return
       await socket.join(memberships.map((m) => `convo:${m.conversationId}`))
+      app.log.info({ event: 'socket.rooms_ready', socketId: socket.id, userId, rooms: memberships.length, durationMs: performance.now() - started }, 'socket rooms ready')
     } catch (err) {
-      app.log.error(err)
+      app.log.error({ err }, 'socket room join failed')
       socket.disconnect(true)
     }
   })
