@@ -1,18 +1,20 @@
 # Deuce · 듀스
 
 **사람과 각자의 AI가 같은 채널에서 함께 대화하는 오픈소스 메신저.**
-Teams·Slack에서 참고한 채팅 경험에 사용자가 자신의 AI를 MCP로 연결하는 기능을 더합니다.
-현재 공개 개발을 준비하는 초기 버전이며 영상통화는 범위에서 제외합니다.
+Teams·Slack에서 참고한 채팅 경험에 사용자가 자신의 AI를 초대하고 함께 대화하는 기능을 더합니다.
+현재 공개 개발 중인 초기 버전이며 영상통화는 범위에서 제외합니다.
 
 ## 지금 할 수 있는 것
 
 - 1:1·그룹·채널 채팅, 실시간 수신, 인용 답장·수정·삭제·반응·고정
 - 파일 첨부·공유 목록, 검색, 멘션·활동, 읽음 상태·프레즌스·알림
-- 사용자별 Codex·Claude Code 등 MCP 연결, 채널 대화/첨부 읽기·검색·AI 글쓰기
+- 사용자별 Codex·Claude Code 연결, 버튼으로 방에 초대하고 요청·멘션으로 AI 답변 받기
+- 기존 MCP 대화/첨부 읽기·검색·AI 글쓰기
 - 웹 앱, Mac·Windows 앱, 버전 확인과 사용자 선택에 따른 다운로드·설치
 - 서버와 브라우저를 연결해 보는 선택적 진단 로그
 
-AI 자동 감시·응답, 자료 OCR/색인, 서버 간 연합, 영상통화는 아직 없습니다.
+초대·PC 실행기는 로컬 검증을 마쳤으며 운영 서버와 새 데스크톱 앱 반영은 별도 단계입니다.
+요청 없는 AI 자동 감시, 자료 OCR/색인, 서버 간 연합, 영상통화는 아직 없습니다.
 Mac arm64의 실제 업데이트는 확인했고 Windows·Intel Mac 업데이트 실기 검증은 남아 있습니다.
 
 ## 시작하기
@@ -21,7 +23,7 @@ Mac arm64의 실제 업데이트는 확인했고 Windows·Intel Mac 업데이트
 |---|---|
 | 실행하고 기여하기 | [로컬 개발](docs/getting-started.md) · [기여 안내](CONTRIBUTING.md) |
 | 내 서버 운영하기 | [서버 설치와 앱 제작](docs/self-hosting.md) |
-| 내 AI 연결하기 | [MCP 연결 안내](docs/ai-connections.md) |
+| 내 AI 연결하기 | [AI 초대·MCP 연결 안내](docs/ai-connections.md) |
 | 완료/미완료 확인 | [진행 상태](docs/PROGRESS.md) · [변경 이력](docs/CHANGELOG.md) |
 | 문제·아이디어 제안 | [GitHub Issues](https://github.com/thissak/Deuce/issues) |
 | 보안 제보 | [보안 안내](SECURITY.md) |
@@ -58,6 +60,7 @@ CI는 GitHub 호스팅 러너에서 코드를 검증하며 운영 VM에 자동 �
 | `apps/web` | React/Vite 웹 앱 |
 | `apps/desktop` | Electron 앱·기본 브라우저 로그인·업데이트 |
 | `apps/mcp` | 공식 MCP SDK 기반 도구와 stdio 커넥터 |
+| `packages/agent-runner` | 개인 PC의 Codex/Claude CLI 실행·서버 연결 |
 | `packages/shared` | 클라이언트·서버 타입/스키마 계약 |
 | `deploy` | 자체 운영에 맞게 수정해서 쓰는 예제 |
 

@@ -6,7 +6,7 @@ import { ConversationList } from './ConversationList'
 export function ChatPage({ me }: { me: UserDto }) {
   const { conversationId } = useParams()
   return (
-    <div className="chat-page">
+    <div className={`chat-page ${conversationId ? 'has-conversation' : ''}`}>
       <ConversationList me={me} activeId={conversationId} />
       {conversationId ? (
         <ChatView key={conversationId} me={me} conversationId={conversationId} />

@@ -37,3 +37,10 @@ describe('collectMentionIds', () => {
     expect(collectMentionIds('@김철 @김철수', members).sort()).toEqual(['u1', 'u2'])
   })
 })
+
+it('AI 실행은 정확한 멘션만 인식하며 이메일과 긴 단어를 요청으로 해석하지 않는다', () => {
+  const ai = { id: 'ai', email: '', name: 'Codex', avatarUrl: null, isAgent: true }
+  expect(collectMentionIds('user@Codex.example 또는 @CodexOther', [ai])).toEqual([])
+  expect(collectMentionIds('@Codex 요약해 주세요', [ai])).toEqual(['ai'])
+  expect(collectMentionIds('확인 @Codex!', [ai])).toEqual(['ai'])
+})

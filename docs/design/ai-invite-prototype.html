@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Deuce · 대화 중 AI 초대 시안</title>
+  <style>
+    :root { --ink:#282735; --muted:#72717d; --line:#e9e8ee; --purple:#6553c9; --tint:#f0edfc; --paper:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#f6f5f9; font:14px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
+    button,input,textarea,select { font:inherit; }
+    button { cursor:pointer; color:inherit; border:0; background:none; }
+    button:disabled { cursor:default; opacity:.5; }
+    button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible { outline:3px solid #b3a2fa; outline-offset:3px; }
+    button { min-height:44px; }
+    [hidden] { display:none !important; }
+    svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    h1,h2,h3,p { margin:0; }
+    .reviewbar { min-height:46px; display:flex; align-items:center; gap:12px; padding:6px 20px; border-bottom:1px solid #ddd8e9; background:#eeebf5; font-size:12px; }
+    .reviewbar strong { font-size:12px; letter-spacing:.07em; color:#62557e; }
+    .reviewbar .explain { color:#6e6680; }
+    .reviewbar label { margin-left:auto; color:#62557e; }
+    .reviewbar select { max-width:138px; border:1px solid #d4cfdf; border-radius:6px; padding:5px; color:#514367; background:#faf9fd; font-size:12px; }
+    .reviewbar button { min-height:32px; padding:0 8px; font-size:12px; }
+    .app { display:grid; grid-template-columns:68px 280px minmax(0,1fr); height:calc(100dvh - 46px); min-height:460px; max-width:1800px; margin:auto; background:white; }
+    .rail { display:flex; flex-direction:column; align-items:center; padding:20px 8px 14px; gap:22px; background:#302b40; color:#d6d1e3; }
+    .brand { background:#fff; color:#4c4267; font-size:26px; font-weight:850; border-radius:12px; width:40px; height:40px; text-align:center; line-height:38px; letter-spacing:-3px; padding-right:3px; }
+    .rail button { width:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:10px; padding:8px 0; border-radius:9px; }
+    .rail .active { background:#524766; color:white; }
+    .rail .spacer { flex:1; }
+    .avatar { width:36px; height:36px; flex-shrink:0; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#eee9fa; color:#665293; font-weight:700; font-size:12px; }
+    .avatar.person { background:#e7f1ed; color:#507364; }
+    .avatar.self { background:#faedde; color:#947045; }
+    .avatar.ai { background:var(--tint); color:var(--purple); }
+    .list { display:flex; flex-direction:column; background:#f8f8fa; border-right:1px solid var(--line); min-height:0; }
+    .list-top { padding:24px 20px 12px; }
+    .list h1 { font-size:23px; font-weight:750; letter-spacing:-.6px; margin-bottom:22px; }
+    .search { display:flex; align-items:center; gap:8px; border:1px solid #e3e2e9; background:white; border-radius:8px; padding:0 10px; height:38px; color:#99939f; }
+    .search svg { width:16px; }
+    .search input { width:100%; border:0; outline:0; background:transparent; font-size:12px; color:var(--ink); min-width:0; }
+    .filters { display:flex; gap:7px; margin-top:12px; }
+    .filters button { min-height:36px; padding:4px 12px; font-size:12px; color:var(--muted); border-radius:7px; }
+    .filters button[aria-pressed="true"] { color:var(--purple); background:#eae6f7; font-weight:650; }
+    .list-label { font-size:11px; font-weight:650; color:#88818d; padding:16px 22px 8px; letter-spacing:.04em; }
+    #rooms { overflow:auto; flex:1; padding:0 10px; }
+    .room { width:100%; text-align:left; display:flex; align-items:center; gap:11px; border-radius:9px; padding:13px 10px; margin-bottom:4px; }
+    .room[aria-current="true"] { background:#eeebf8; }
+    .room:hover { background:#eeebf3; }
+    .room .avatar { border-radius:10px; width:36px; height:36px; font-size:18px; background:#eceaf0; color:#837b90; }
+    .room .avatar.dm { font-size:12px; background:#e7f1ed; }
+    .room .summary { min-width:0; flex:1; }
+    .room strong { font-size:13px; font-weight:650; display:block; }
+    .room .preview { display:block; font-size:11px; color:#827b8e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:4px; }
+    .room .count { font-size:10px; border-radius:6px; padding:1px 5px; color:var(--purple); background:#e2dcf5; }
+    .profile { border-top:1px solid var(--line); margin-top:auto; padding:16px; display:flex; align-items:center; gap:10px; text-align:left; width:100%; }
+    .profile span:last-child { display:flex; flex-direction:column; gap:2px; }
+    .profile small { color:var(--muted); font-size:11px; }
+    .chat { display:flex; flex-direction:column; min-width:0; min-height:0; background:white; }
+    .chat-header { display:flex; align-items:center; gap:14px; padding:20px 30px 14px; }
+    .title { flex:1; min-width:0; }
+    .title h2 { font-size:19px; letter-spacing:-.3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .title p { color:var(--muted); font-size:12px; margin-top:4px; }
+    .invite { background:var(--purple); color:white; border-radius:9px; padding:0 15px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; font-size:13px; white-space:nowrap; }
+    .invite:hover { background:#5745b7; }
+    .invite.joined { color:var(--purple); background:var(--tint); }
+    .subhead { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding:0 30px; }
+    .tabs { display:flex; gap:24px; }
+    .tabs button { color:var(--muted); font-size:13px; border-bottom:2px solid transparent; padding:10px 2px; }
+    .tabs button[aria-selected="true"] { border-color:var(--purple); color:var(--ink); font-weight:600; }
+    #scope { font-size:11px; color:#8a8297; text-align:right; }
+    .mobile-back { display:none; padding:4px; flex-shrink:0; }
+    .timeline { padding:24px 32px 12px; overflow:auto; flex:1; min-height:0; }
+    .intro { border-bottom:1px solid var(--line); padding:8px 0 24px; margin-bottom:20px; }
+    .eyebrow { font-size:10px; color:#9a91a7; letter-spacing:.1em; font-weight:600; margin-bottom:5px; }
+    .intro h3 { font-size:25px; letter-spacing:-.8px; font-weight:700; }
+    .intro p { color:var(--muted); font-size:13px; margin-top:6px; }
+    .date { display:flex; align-items:center; gap:12px; color:#99929f; font-size:10px; margin:24px 0; }
+    .date::before,.date::after { content:""; height:1px; background:#f0eef3; flex:1; }
+    .message { display:flex; gap:12px; margin:0 0 23px; }
+    .message-body { flex:1; min-width:0; }
+    .meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:1px 0 5px; }
+    .meta strong { font-size:13px; font-weight:650; }
+    .meta time,.owner { color:#9a939f; font-size:10px; }
+    .message p { font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; }
+    .file { display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-top:12px; max-width:320px; background:#fbfafc; }
+    .file svg { color:#8a7db7; }
+    .file small { display:block; color:#8e8797; font-size:11px; }
+    .tag { font-size:9px; border:1px solid #dfd8f3; background:#f4f0fc; color:var(--purple); border-radius:4px; padding:0 4px; }
+    .system { font-size:11px; color:#887d99; display:flex; align-items:center; gap:8px; margin:20px 0; padding-left:48px; }
+    .system svg { width:14px; height:14px; }
+    .ai-answer { padding:15px 17px; background:#f8f6fd; border:1px solid #eee9f8; border-radius:0 12px 12px; max-width:670px; }
+    .ai-answer p { font-size:13px; }
+    .ai-answer small { color:#8a7aa4; display:block; margin-top:10px; font-size:10px; }
+    .bottom { padding:10px 30px 20px; }
+    .ai-bar { padding:11px 13px; border:1px solid #eae3f7; border-radius:10px; margin-bottom:10px; background:#faf8ff; }
+    .ai-bar-head { display:flex; gap:8px; align-items:center; font-size:12px; }
+    .dot { width:6px; height:6px; background:#52a082; border-radius:50%; display:inline-block; }
+    .dot.offline { background:#b49b6e; }
+    .ai-bar small { color:#887c99; }
+    .suggestions { display:flex; gap:7px; margin-top:9px; flex-wrap:wrap; }
+    .suggestions button { border:1px solid #e4deef; background:white; color:#77628e; border-radius:7px; font-size:11px; min-height:34px; padding:4px 10px; }
+    .composer { border:1px solid #ddd9e6; box-shadow:0 2px 5px #30234504; border-radius:11px; overflow:hidden; background:white; }
+    .composer:focus-within { border-color:#a898d8; box-shadow:0 0 0 2px #a898d812; }
+    textarea { resize:none; width:100%; display:block; border:0; background:transparent; outline:0 !important; min-height:62px; max-height:160px; padding:16px 16px 5px; color:var(--ink); font-size:13px; }
+    textarea::placeholder { color:#aaa3b2; }
+    .compose-actions { display:flex; align-items:center; justify-content:space-between; padding:0 8px 6px 15px; color:#aba3b2; font-size:10px; }
+    .send { border-radius:8px; width:38px; min-height:36px; display:flex; align-items:center; justify-content:center; background:var(--purple); color:white; }
+    .footnote { text-align:center; font-size:10px; color:#a79fac; padding-top:8px; }
+    .error { padding:10px 14px; background:#fff4ee; border-radius:8px; font-size:12px; color:#9c6046; margin:0 30px 12px; }
+    .shared { padding:30px; overflow:auto; flex:1; }
+    .empty { padding:24px 12px; color:var(--muted); font-size:12px; }
+    dialog { color:var(--ink); border:1px solid var(--line); border-radius:18px; padding:28px; width:min(440px,calc(100% - 28px)); max-height:85dvh; overflow:auto; box-shadow:0 28px 100px #251b4930; }
+    dialog::backdrop { background:#26203445; backdrop-filter:blur(3px); }
+    .dialog-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .dialog-head h2 { font-size:21px; letter-spacing:-.6px; }
+    .close { min-height:36px; width:36px; border-radius:8px; color:#998ca7; }
+    dialog p { color:var(--muted); font-size:13px; line-height:1.8; }
+    .providers { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:22px 0; }
+    .provider { display:flex; flex-direction:column; align-items:flex-start; gap:10px; border:1px solid var(--line); border-radius:12px; padding:16px; font-weight:650; }
+    .provider[aria-pressed="true"] { border-color:var(--purple); background:var(--tint); color:var(--purple); }
+    .provider small { font-size:10px; font-weight:400; color:var(--muted); }
+    .solid { background:var(--purple); color:white; border-radius:8px; width:100%; margin-top:20px; font-weight:600; }
+    .soft { border:1px solid var(--line); border-radius:8px; width:100%; margin-top:10px; }
+    .notice { font-size:12px; color:#7b6d94; background:#f6f3fb; padding:14px; border-radius:9px; margin-top:18px; }
+    .steps { padding-left:22px; color:#776d81; font-size:13px; line-height:1.9; }
+    .steps li { padding-bottom:10px; }
+    dialog a { color:var(--purple); }
+    .participant { display:flex; gap:12px; align-items:center; margin:22px 0 15px; }
+    .participant small { display:block; color:var(--muted); }
+    .danger { color:#a66567; }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); padding:12px 20px; border-radius:10px; background:#3b324c; color:white; box-shadow:0 6px 22px #24183728; z-index:5; font-size:12px; }
+    @media (min-width:1400px) { .timeline,.bottom { padding-left:60px; padding-right:60px; } .chat-header { padding-top:26px; } }
+    @media (max-width:900px) { .app { grid-template-columns:60px 240px minmax(0,1fr); } .chat-header { padding:16px 20px 10px; } .chat-header>.avatar { display:none; } .subhead { padding:0 20px; } #scope { max-width:155px; font-size:10px; } .timeline { padding:18px 20px 10px; } .bottom { padding:10px 20px 14px; } .title h2 { font-size:17px; } }
+    @media (max-width:680px) {
+      .reviewbar { height:72px; padding:6px 12px; flex-wrap:wrap; column-gap:8px; row-gap:0; }
+      .reviewbar .explain { font-size:10px; } .reviewbar label { margin-left:0; font-size:10px; }
+      .reviewbar select { min-height:28px; font-size:11px; } .reviewbar button { margin-left:auto; }
+      .app { display:block; height:calc(100dvh - 72px); min-height:0; }
+      .rail,.list { display:none; } .chat { height:100%; }
+      body.show-list .list { display:flex; height:100%; border:0; } body.show-list .chat { display:none; }
+      .list-top { padding:22px 20px 10px; } .list h1 { margin-bottom:16px; } .room { padding:17px 12px; }
+      .mobile-back { display:flex; align-items:center; justify-content:center; width:32px; }
+      .chat-header { padding:10px 14px 8px 8px; gap:7px; }
+      .title h2 { font-size:16px; } .title p { font-size:10px; }
+      .invite { font-size:12px; padding:0 11px; gap:5px; min-height:42px; } .invite svg { width:16px; }
+      .subhead { padding:0 16px; gap:4px; } .tabs { gap:20px; } .tabs button { min-height:40px; font-size:12px; }
+      #scope { max-width:185px; font-size:9px; line-height:1.6; }
+      .timeline { padding:12px 18px 4px; } .intro { padding:12px 0 18px; margin-bottom:16px; }
+      .intro h3 { font-size:22px; } .intro p { font-size:12px; }
+      .message { gap:10px; margin-bottom:22px; } .message .avatar { width:31px; height:31px; border-radius:10px; font-size:11px; }
+      .message p { font-size:13px; } .meta strong { font-size:12px; } .meta { gap:6px; }
+      .bottom { padding:8px 12px max(12px,env(safe-area-inset-bottom)); }
+      .composer textarea { min-height:56px; padding:13px 12px 3px; font-size:16px; }
+      .compose-actions { padding-left:12px; } .send { min-height:40px; width:42px; }
+      .suggestions button { min-height:40px; } .system { padding-left:0; font-size:10px; }
+      .footnote { display:none; } .ai-bar small { font-size:10px; } .ai-bar { padding:9px 10px; }
+      .error { margin:0 12px 8px; } .shared { padding:22px 18px; }
+      dialog { padding:22px; } .dialog-head h2 { font-size:19px; }
+    }
+    @media (prefers-reduced-motion:no-preference) { .invite,.room { transition:background .15s; } }
+  </style>
+</head>
+<body>
+  <div class="reviewbar" aria-label="시안 체험 도구">
+    <strong>DEUCE / PROTOTYPE</strong><span class="explain">대화·연결·AI 응답은 모두 예시입니다</span>
+    <label for="scenario">체험 상태</label><select id="scenario"><option value="ready">연결 완료</option><option value="new">처음 연결</option><option value="offline">AI 오프라인</option><option value="failure">초대 실패</option></select>
+    <button id="reset">처음으로</button>
+  </div>
+  <div class="app">
+    <nav class="rail" aria-label="주 메뉴">
+      <div class="brand" aria-label="Deuce">d.</div>
+      <button class="active" id="chat-nav" aria-label="대화 목록"><span data-icon="chat"></span>대화</button>
+      <div class="spacer"></div>
+      <button id="my-ai" aria-label="내 AI 설정"><span data-icon="spark"></span>내 AI</button>
+      <div class="avatar self" aria-label="도윤">도윤</div>
+    </nav>
+    <aside class="list" aria-label="대화 목록">
+      <div class="list-top"><h1>대화</h1><label class="search"><span data-icon="search"></span><input id="search" aria-label="대화 찾기" placeholder="대화 찾기"></label>
+        <div class="filters"><button data-filter="all" aria-pressed="true">전체</button><button data-filter="unread" aria-pressed="false">안 읽음</button><button data-filter="channel" aria-pressed="false">채널</button></div>
+      </div>
+      <div class="list-label">내 대화</div><div id="rooms"></div>
+      <button class="profile" id="profile"><span class="avatar ai" data-icon="spark"></span><span><strong id="default-name">내 Codex</strong><small>기본 AI · 연결 설정</small></span></button>
+    </aside>
+    <main class="chat">
+      <header class="chat-header">
+        <button class="mobile-back" id="back" aria-label="대화 목록으로 돌아가기"><span data-icon="back"></span></button>
+        <div class="avatar" id="room-avatar">#</div>
+        <div class="title"><h2 id="room-title">듀스 요구사항</h2><p id="people">도윤, 민서, 지우 · 3명</p></div>
+        <button class="invite" id="invite"><span data-icon="spark"></span><span id="invite-label">AI 초대</span></button>
+      </header>
+      <div class="subhead"><div class="tabs" role="tablist" aria-label="대화 보기"><button role="tab" aria-selected="true" id="chat-tab" aria-controls="timeline">대화</button><button role="tab" aria-selected="false" id="shared-tab" aria-controls="shared">자료</button></div><span id="scope">내 Codex · 이 방의 대화·자료 공유</span></div>
+      <div id="timeline" class="timeline" role="tabpanel" aria-labelledby="chat-tab"></div>
+      <section id="shared" class="shared" role="tabpanel" aria-labelledby="shared-tab" hidden></section>
+      <div id="error" class="error" role="alert" hidden></div>
+      <div class="bottom" id="bottom">
+        <div class="ai-bar" id="ai-bar" hidden><div class="ai-bar-head"><span class="dot" id="ai-dot"></span><strong id="ai-status"></strong><small id="ai-detail"></small></div><div class="suggestions" id="suggestions"><button data-prompt="지금까지의 대화와 자료를 요약해줘">지금까지 요약</button><button data-prompt="이 대화에서 결정해야 할 사항을 정리해줘">결정할 것 정리</button></div></div>
+        <form id="composer" class="composer"><label class="sr-only" for="draft">메시지</label><textarea id="draft" rows="2" maxlength="4000" placeholder="함께 이야기해 보세요"></textarea><div class="compose-actions"><span id="compose-hint">Enter 전송 · Shift + Enter 줄바꿈</span><button class="send" type="submit" aria-label="메시지 전송" disabled><span data-icon="send"></span></button></div></form>
+        <p class="footnote">대화가 이어지는 곳, 필요한 순간에 내 AI와 함께.</p>
+      </div>
+    </main>
+  </div>
+  <dialog id="setup" aria-labelledby="setup-title">
+    <div class="dialog-head"><h2 id="setup-title">내 AI를 한 번 연결해 두세요</h2><button class="close" data-close="setup" aria-label="AI 설정 닫기">✕</button></div>
+    <div id="setup-choice"><p>대화하다 필요할 때 바로 초대할 수 있습니다.<br>어떤 AI와 함께할까요?</p>
+      <div class="providers"><button class="provider" data-provider="Codex" aria-pressed="true"><span data-icon="spark"></span>Codex<small>OpenAI</small></button><button class="provider" data-provider="Claude" aria-pressed="false"><span data-icon="spark"></span>Claude<small>Claude Code</small></button></div>
+      <p>초대한 방의 이전·이후 대화와 자료를 읽고, 방 참여자의 요청에 답합니다.</p><button class="solid" id="setup-next">연결 안내 보기</button>
+    </div>
+    <div id="setup-guide" hidden><p id="guide-intro"></p><ol class="steps"><li>Deuce에서 내 AI 연결 설정을 준비합니다.</li><li>선택한 AI 앱에 연결 설정을 등록합니다.</li><li>AI가 실제로 접속했는지 확인하고 원래 대화로 돌아옵니다.</li></ol><a id="official-guide" target="_blank" rel="noopener noreferrer">공식 연결 방법 보기 ↗</a><div class="notice">화면 시안입니다. 실제 키를 발급하거나 AI 앱을 연결하지 않습니다. 아래 버튼으로 연결이 완료된 다음 화면을 체험합니다.</div><button class="solid" id="simulate-connected">연결 완료 상태로 체험</button><button class="soft" id="setup-back">AI 다시 선택</button></div>
+  </dialog>
+  <dialog id="members" aria-labelledby="members-title"><div class="dialog-head"><h2 id="members-title">함께하는 AI</h2><button class="close" data-close="members" aria-label="AI 참여 정보 닫기">✕</button></div><div class="participant"><div class="avatar ai" data-icon="spark"></div><div><strong id="member-name"></strong><small>도윤님의 AI</small></div></div><p>이 방의 이전·이후 대화와 첨부 자료를 읽고 답할 수 있습니다. 다른 방에 참여하려면 그 방에서 초대합니다.</p><div class="notice" id="member-state"></div><button class="soft danger" id="remove">이 방에서 내보내기</button></dialog>
+  <div class="sr-only" id="announcer" aria-live="polite"></div><div id="toast" role="status" hidden></div>
+  <script>
+    // Review-only fixture: no network, credentials, storage or model calls.
+    const $ = (id) => document.getElementById(id);
+    const paths = {
+      spark:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>',
+      chat:'<path d="M20 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 18 0Z"/><path d="M7 9h8M7 13h5"/>',
+      search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
+      back:'<path d="m14 5-7 7 7 7"/>',
+      send:'<path d="m4 4 17 8-17 8 3-8-3-8ZM7 12h14"/>',
+      file:'<path d="M14 2H5v20h14V7Z"/><path d="M14 2v5h5M8 12h8M8 16h6"/>'
+    };
+    const icon = (name) => '<svg viewBox="0 0 24 24" aria-hidden="true">'+paths[name]+'</svg>';
+    document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
+    const escape = (value) => String(value).replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const initialRooms = () => [
+      {id:'requirements',name:'듀스 요구사항',type:'channel',people:'도윤, 민서, 지우 · 3명',desc:'더 나은 듀스를 함께 만들어 가는 대화',preview:'민서: AI도 같이 의견을 내면 좋겠어요.',unread:0,agent:null,draft:'',messages:[
+        {who:'지우',text:'모바일 출시 전에, 우리가 자주 쓰는 흐름부터 다듬으면 어떨까요?',time:'10:24'},
+        {who:'도윤',text:'좋아요. 대화하다가 AI가 필요하면, 버튼 하나로 초대하는 거죠.',time:'10:25'},
+        {who:'민서',text:'AI도 같이 의견을 내면 좋겠어요. 지금까지 나온 아이디어를 모아봤어요.',time:'10:26',file:true}
+      ]},
+      {id:'test',name:'앱 테스트',type:'channel',people:'도윤, 지우 · 2명',desc:'써 보면서 발견한 것들을 나눠요',preview:'지우: 모바일에서도 초대하기 쉬우면 좋겠어요.',unread:2,agent:null,draft:'',messages:[{who:'지우',text:'모바일에서도 초대하기 쉬우면 좋겠어요. 헤더에 버튼이 보이면 바로 찾을 수 있겠네요.',time:'09:45'}]},
+      {id:'guide',name:'사용방법',type:'channel',people:'도윤, 민서, 지우 · 3명',desc:'듀스와 조금 더 가까워지기',preview:'함께 쓰는 방법을 정리하는 공간이에요.',unread:0,agent:null,draft:'',messages:[{who:'민서',text:'함께 쓰는 방법을 정리하는 공간이에요. 처음 연결한 AI도 여기에서 시험해 봐요.',time:'어제'}]},
+      {id:'minseo',name:'민서',type:'dm',people:'도윤, 민서 · 2명',desc:'민서님과의 대화',preview:'의견을 조금 더 정리해 볼까요?',unread:1,agent:null,draft:'',messages:[{who:'민서',text:'의견을 조금 더 정리해 볼까요? 필요하면 각자의 AI도 초대할 수 있겠네요.',time:'09:30'}]}
+    ];
+    let rooms=initialRooms(), current='requirements', filter='all', provider='Codex', selectedProvider='Codex', mode='ready', connected=true, pendingRoom=null, toastTimer;
+    const room=() => rooms.find(r=>r.id===current);
+    const notify=(text) => { $('announcer').textContent=text; $('toast').textContent=text; $('toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('toast').hidden=true,3000); };
+    function fileCard() { return '<div class="file">'+icon('file')+'<div><strong>듀스 아이디어.md</strong><small>화면 예시 · 제품 아이디어 3개</small></div></div>'; }
+    function renderRooms() {
+      const query=$('search').value.trim().toLowerCase();
+      const visible=rooms.filter(r=>(filter==='all'||filter==='unread'&&r.unread>0||filter==='channel'&&r.type==='channel')&&r.name.toLowerCase().includes(query));
+      $('rooms').innerHTML=visible.map(r=>'<button class="room" data-room="'+r.id+'" aria-current="'+(r.id===current)+'"><span class="avatar '+(r.type==='dm'?'dm':'')+'">'+(r.type==='dm'?'민서':'#')+'</span><span class="summary"><strong>'+escape(r.name)+'</strong><span class="preview">'+escape(r.preview)+'</span></span>'+(r.unread?'<span class="count" aria-label="안 읽은 메시지 '+r.unread+'개">'+r.unread+'</span>':'')+'</button>').join('')||'<p class="empty">해당하는 대화가 없습니다.</p>';
+    }
+    function messageHtml(m) {
+      if(m.system) return '<div class="system">'+icon('spark')+escape(m.text)+'</div>';
+      const ai=m.ai, own=m.who==='도윤';
+      return '<article class="message"><div class="avatar '+(ai?'ai':own?'self':'person')+'">'+(ai?icon('spark'):escape(m.who))+'</div><div class="message-body"><div class="meta"><strong>'+escape(m.who)+'</strong>'+(ai?'<span class="tag">AI</span><span class="owner">도윤님의 AI</span>':'')+'<time>'+escape(m.time||'지금')+'</time></div><div class="'+(ai?'ai-answer':'')+'"><p>'+escape(m.text)+'</p>'+(m.file?fileCard():'')+(ai?'<small>시안용 답변 예시 · 실제 AI가 생성한 응답이 아닙니다</small>':'')+'</div></div></article>';
+    }
+    function renderTimeline() {
+      const r=room();
+      $('timeline').innerHTML='<div class="intro"><div class="eyebrow">'+(r.type==='dm'?'DIRECT MESSAGE':'A SPACE TO THINK TOGETHER')+'</div><h3>'+escape(r.type==='dm'?r.name:'# '+r.name)+'</h3><p>'+escape(r.desc)+'</p></div><div class="date">9월 8일 화요일</div>'+r.messages.map(messageHtml).join('');
+      $('shared').innerHTML='<h3>함께 나눈 자료</h3>'+(r.messages.some(m=>m.file)?fileCard()+'<p class="empty">예시 내용: 대화 중 AI 초대, 방별 접근, 모바일 흐름 개선.</p>':'<p class="empty">아직 공유한 자료가 없습니다.</p>');
+    }
+    function renderStatus() {
+      const r=room();
+      $('room-title').textContent=r.name; $('room-avatar').textContent=r.type==='dm'?'민서':'#';
+      $('people').textContent=r.people+(r.agent?' · AI 1':'');
+      $('invite-label').textContent=r.agent?'AI 참여 중':'AI 초대'; $('invite').classList.toggle('joined',Boolean(r.agent));
+      $('invite').setAttribute('aria-label',r.agent?r.agent+' 참여 정보':'AI 초대');
+      $('scope').textContent=(r.agent||'내 '+provider)+' · 이 방의 대화·자료 공유';
+      $('default-name').textContent='내 '+provider;
+      $('ai-bar').hidden=!r.agent;
+      $('ai-status').textContent=r.agent?(r.agent+(mode==='offline'?' · 오프라인':' · 응답 가능')):'';
+      $('ai-detail').textContent=mode==='offline'?'AI가 켜지면 다시 요청해 주세요':'@로 말을 걸어 보세요';
+      $('ai-dot').classList.toggle('offline',mode==='offline');
+      $('suggestions').hidden=mode==='offline';
+      $('draft').placeholder=r.agent?'메시지 또는 @'+r.agent+'에게 요청':'함께 이야기해 보세요';
+    }
+    function showChat() { $('chat-tab').setAttribute('aria-selected','true'); $('shared-tab').setAttribute('aria-selected','false'); $('timeline').hidden=false; $('shared').hidden=true; $('bottom').hidden=false; }
+    function render() { renderRooms(); renderTimeline(); renderStatus(); $('draft').value=room().draft; $('composer').querySelector('button').disabled=!room().draft.trim(); }
+    function scrollEnd() { $('timeline').scrollTop=$('timeline').scrollHeight; }
+    function enterRoom(id) { current=id; room().unread=0; $('error').hidden=true; document.body.classList.remove('show-list'); showChat(); render(); }
+    function openSetup(inviting=false) {
+      pendingRoom=inviting?current:null; selectedProvider=provider;
+      $('setup-title').textContent=connected?'내 기본 AI':'내 AI를 한 번 연결해 두세요';
+      $('setup-choice').hidden=false; $('setup-guide').hidden=true;
+      document.querySelectorAll('[data-provider]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.provider===selectedProvider)));
+      $('setup').showModal();
+    }
+    function invite() {
+      if(room().agent) { $('member-name').textContent=room().agent; $('member-state').textContent=mode==='offline'?'방에는 참여했지만 현재 AI가 꺼져 있어 응답할 수 없습니다.':'참여 중 · @로 요청하면 이 대화에 답합니다.'; $('members').showModal(); return; }
+      if(!connected) { openSetup(true); return; }
+      if(mode==='failure') { $('error').textContent='초대를 완료하지 못했습니다. 대화와 초안은 그대로입니다. 체험 상태를 ‘연결 완료’로 바꾸고 다시 초대해 보세요.'; $('error').hidden=false; return; }
+      room().agent=provider;
+      room().messages.push({system:true,text:'도윤님이 '+provider+'를 초대했습니다 · 이 방의 대화와 자료 공유'});
+      $('error').hidden=true; showChat(); renderStatus(); renderTimeline(); scrollEnd(); notify(provider+'가 이 대화에 참여했습니다.');
+    }
+    function sendMessage(event) {
+      event.preventDefault(); const r=room(), value=$('draft').value.trim(); if(!value) return;
+      r.messages.push({who:'도윤',text:value}); r.draft='';
+      r.preview='도윤: '+value;
+      if(r.agent&&value.includes('@'+r.agent)) {
+        if(mode==='offline') r.messages.push({system:true,text:r.agent+'가 오프라인입니다. 이 요청은 자동 실행되지 않습니다. 연결 후 다시 요청해 주세요.'});
+        else r.messages.push({who:r.agent,ai:true,text:r.id==='requirements'?'이 대화에서 나온 방향을 정리했어요.\n\n1. 모바일 출시 전에 자주 쓰는 채팅 흐름을 다듬어요.\n2. 필요한 순간에 버튼 한 번으로 내 AI를 초대해요.\n3. AI는 초대한 방의 대화와 자료를 함께 봐요.\n\n다음에는 처음 연결하는 사람이 쉽게 따라오는지 확인하면 좋겠어요.':'이 방에서는 '+r.name+'에 관한 의견을 나누고 있어요. 먼저 지금 대화의 결정 사항과 남은 질문을 구분해 보면 좋겠어요.'});
+      }
+      render(); scrollEnd(); $('draft').focus(); $('announcer').textContent=r.agent&&value.includes('@'+r.agent)?'예시 요청 결과가 대화에 표시되었습니다.':'예시 메시지를 전송했습니다.';
+    }
+    $('rooms').addEventListener('click',e=>{const el=e.target.closest('[data-room]');if(el) enterRoom(el.dataset.room);});
+    $('search').addEventListener('input',renderRooms);
+    document.querySelectorAll('[data-filter]').forEach(el=>el.addEventListener('click',()=>{filter=el.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));renderRooms();}));
+    $('invite').addEventListener('click',invite);
+    ['my-ai','profile'].forEach(id=>$(id).addEventListener('click',()=>openSetup()));
+    ['back','chat-nav'].forEach(id=>$(id).addEventListener('click',()=>document.body.classList.add('show-list')));
+    $('chat-tab').addEventListener('click',showChat);
+    $('shared-tab').addEventListener('click',()=>{$('chat-tab').setAttribute('aria-selected','false');$('shared-tab').setAttribute('aria-selected','true');$('timeline').hidden=true;$('shared').hidden=false;$('bottom').hidden=true;});
+    $('draft').addEventListener('input',()=>{room().draft=$('draft').value;$('composer').querySelector('button').disabled=!room().draft.trim();});
+    $('draft').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){sendMessage(e);}});
+    $('composer').addEventListener('submit',sendMessage);
+    document.querySelectorAll('[data-prompt]').forEach(el=>el.addEventListener('click',()=>{if(room().draft.trim()){notify('작성 중인 메시지를 먼저 보내거나 비워 주세요.');return;}room().draft='@'+room().agent+' '+el.dataset.prompt;render();$('draft').focus();scrollEnd();}));
+    document.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',()=>$(el.dataset.close).close()));
+    document.querySelectorAll('[data-provider]').forEach(el=>el.addEventListener('click',()=>{selectedProvider=el.dataset.provider;document.querySelectorAll('[data-provider]').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));}));
+    $('setup-next').addEventListener('click',()=>{$('setup-choice').hidden=true;$('setup-guide').hidden=false;$('guide-intro').textContent=selectedProvider+'를 연결하는 단계입니다. 설정은 최초 한 번 진행합니다.';$('official-guide').href=selectedProvider==='Codex'?'https://learn.chatgpt.com/docs/extend/mcp?surface=cli':'https://code.claude.com/docs/en/mcp';$('simulate-connected').focus();});
+    $('setup-back').addEventListener('click',()=>{$('setup-choice').hidden=false;$('setup-guide').hidden=true;$('setup-next').focus();});
+    $('simulate-connected').addEventListener('click',()=>{provider=selectedProvider;connected=true;mode='ready';$('scenario').value='ready';const target=pendingRoom;pendingRoom=null;$('setup').close();if(target){enterRoom(target);invite();}else{renderStatus();notify(provider+'를 기본 AI로 선택한 예시입니다.');}});
+    $('setup').addEventListener('close',()=>{pendingRoom=null;});
+    $('remove').addEventListener('click',()=>{const name=room().agent;room().agent=null;room().messages.push({system:true,text:'도윤님이 '+name+'를 이 방에서 내보냈습니다'});$('members').close();renderStatus();renderTimeline();scrollEnd();notify('이 방에서 '+name+'의 참여가 종료되었습니다.');});
+    $('scenario').addEventListener('change',()=>{mode=$('scenario').value;connected=mode!=='new';$('error').hidden=true;if(mode==='new'){rooms.forEach(r=>{r.agent=null;});}renderStatus();});
+    $('reset').addEventListener('click',()=>{rooms=initialRooms();current='requirements';filter='all';provider=selectedProvider='Codex';mode='ready';connected=true;pendingRoom=null;$('scenario').value='ready';$('search').value='';$('error').hidden=true;$('toast').hidden=true;$('announcer').textContent='';document.querySelectorAll('[data-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.filter==='all')));document.body.classList.remove('show-list');showChat();render();});
+    render();
+  </script>
+</body>
+</html>

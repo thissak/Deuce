@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/http'
 import { conversationDetailQuery, conversationKey, conversationsKey } from '../api/queries'
 import { truncate } from '../lib/format'
-import { AgentSettings } from './AgentSettings'
+import { AgentInvite, conversationAgentsQuery } from './AgentInvite'
 import { Composer } from './Composer'
 import { ErrorNotice } from './ErrorNotice'
 import { GroupSettings } from './GroupSettings'
@@ -18,7 +18,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const detail = useQuery(conversationDetailQuery(conversationId))
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
-  const [showAgents, setShowAgents] = useState(false)
+  const agents = useQuery(conversationAgentsQuery(conversationId))
   const [showSettings, setShowSettings] = useState(false)
   const [params, setParams] = useSearchParams()
   const jumpToId = params.get('m')
@@ -56,10 +56,16 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   if (!detail.data) return <section className="chat-view" />
 
   const c = detail.data
+  const participating = (agents.data ?? []).filter(a => a.participating && a.userId)
+  const mentionMembers = [...c.members, ...participating.map(a => ({ id: a.userId!,
+    name: c.members.some(u => u.name === a.name) || participating.some(other => other.id !== a.id && other.name === a.name)
+      ? `${a.name}·AI-${a.id.slice(0, 8)}` : a.name,
+    email: '', avatarUrl: null, isAgent: true }))]
   const other = c.type === 'DM' ? c.members.find((u) => u.id !== me.id) : undefined
   return (
     <section className="chat-view">
       <header className="chat-header">
+        <Link className="mobile-chat-back" to="/chat" aria-label="대화 목록으로 돌아가기">‹</Link>
         <span className="avatar-wrap">
           <span className="avatar">{c.displayName.slice(0, 1)}</span>
           {other && <PresenceDot userId={other.id} />}
@@ -78,12 +84,12 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           >
             {c.mutedAt ? '🔕' : '🔔'}
           </button>
-          <button className="btn-plain" onClick={() => setShowAgents(true)}>AI 연결</button>
           {c.type !== 'DM' && (
             <button className="icon-btn" title="그룹 설정" onClick={() => setShowSettings(true)}>⚙️</button>
           )}
         </div>
       </header>
+      <AgentInvite conversationId={conversationId} />
       {mute.isError && <ErrorNotice message="음소거 설정에 실패했습니다. 다시 시도해 주세요." />}
       {c.pinnedMessage && tab === 'chat' && (
         <button className="pin-banner" onClick={() => setParams({ m: c.pinnedMessage!.id })}>
@@ -95,7 +101,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           <Timeline
             me={me}
             conversationId={conversationId}
-            members={c.members}
+            members={mentionMembers}
             onReply={setReplyTo}
             jumpToId={jumpToId}
             onJumpDone={() => setParams({}, { replace: true })}
@@ -103,7 +109,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           <Composer
             me={me}
             conversationId={conversationId}
-            members={c.members}
+            members={mentionMembers}
             replyTo={replyTo}
             onClearReply={() => setReplyTo(null)}
           />
@@ -111,7 +117,6 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
       ) : (
         <SharedTab conversationId={conversationId} />
       )}
-      {showAgents && <AgentSettings conversationId={c.id} onClose={() => setShowAgents(false)} />}
       {showSettings && <GroupSettings me={me} detail={c} onClose={() => setShowSettings(false)} />}
     </section>
   )

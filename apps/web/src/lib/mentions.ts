@@ -16,7 +16,13 @@ export function collectMentionIds(text: string, members: UserDto[]): string[] {
   const ids = new Set<string>()
   let at = text.indexOf('@')
   while (at !== -1) {
-    const hit = sorted.find((u) => text.startsWith(`@${u.name}`, at))
+    const hit = sorted.find((u) => {
+      if (!text.startsWith(`@${u.name}`, at)) return false
+      if (!u.isAgent) return true
+      // AI mentions execute a model: an email address or a longer word is not a request.
+      const end = at + u.name.length + 1
+      return (at === 0 || /\s/.test(text[at - 1]!)) && (end === text.length || /[\s.,!?:;。！？]/u.test(text[end]!))
+    })
     if (hit) ids.add(hit.id)
     at = text.indexOf('@', at + 1 + (hit ? hit.name.length : 0))
   }

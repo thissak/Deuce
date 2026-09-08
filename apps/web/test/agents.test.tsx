@@ -73,6 +73,7 @@ it('키 발급 후 중복 발급을 막고 해제하면 저장 버튼과 키 상
   await screen.findByRole('button', { name: 'AI 연결 파일 저장' })
   expect((screen.getByRole('button', { name: '에이전트 등록' }) as HTMLButtonElement).disabled).toBe(true)
   expect(document.body.textContent).not.toContain('SECRET_TOKEN')
+  fireEvent.click(screen.getByText('기존 MCP 방식으로 연결'))
   fireEvent.click(screen.getByRole('button', { name: 'Codex 설정 복사' }))
   await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('http_headers = { Authorization = "Bearer SECRET_TOKEN" }')))
   expect(writeText.mock.calls[0]![0]).toContain(`${location.origin}/mcp`)
