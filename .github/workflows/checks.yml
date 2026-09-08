@@ -22,7 +22,7 @@ jobs:
           POSTGRES_DB: deuce_test
         ports: ['5434:5432']
         options: >-
-          --health-cmd 'pg_isready -U deuce -d deuce_test'
+          --health-cmd "pg_isready -U deuce -d deuce_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://deuce:deuce@localhost:5434/deuce_test

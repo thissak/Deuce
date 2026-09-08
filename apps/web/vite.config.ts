@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     // Keep the OAuth callback and Node MCP clients on the documented local port.
-    host: '127.0.0.1',
+    host: 'localhost',
     port: 5173,
     strictPort: true,
     proxy: {

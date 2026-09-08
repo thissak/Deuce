@@ -82,6 +82,8 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
 
   app.decorate('io', io)
   app.decorate('presence', presence)
+  // HTTP 종료는 열린 WebSocket을 기다리므로 transport를 먼저 닫는다.
+  app.addHook('preClose', async () => { io.engine.close() })
   app.addHook('onClose', async () => {
     io.close()
   })
