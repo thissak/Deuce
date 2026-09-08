@@ -26,7 +26,7 @@ it('실제 stdio initialize/tools 호출로 HTTP 인증·메시지·첨부를 �
   const client = new Client({ name: 'deuce-protocol-test', version: '1.0.0' })
   try {
     await client.connect(transport)
-    expect((await client.listTools()).tools.map((t) => t.name)).toEqual(['get_channel', 'read_messages', 'search_messages', 'post_message', 'read_attachment'])
+    expect((await client.listTools()).tools.map((t) => t.name)).toEqual(['list_conversations', 'get_channel', 'get_conversation', 'read_messages', 'search_messages', 'post_message', 'read_attachment'])
     const context = await client.callTool({ name: 'get_channel' }); expect(JSON.stringify(context)).toContain('요구사항')
     await client.callTool({ name: 'read_messages', arguments: { limit: 2 } })
     await client.callTool({ name: 'search_messages', arguments: { query: '조사 & 자료' } })
@@ -37,6 +37,14 @@ it('실제 stdio initialize/tools 호출로 HTTP 인증·메시지·첨부를 �
     expect(seen.filter((r) => r.method === 'POST')).toHaveLength(1)
     expect(seen.find((r) => r.method === 'POST')!.body).toBe(JSON.stringify({ body: 'AI 의견' }))
     expect(JSON.stringify(context)).not.toContain(token)
+    const conversationId = randomUUID()
+    await client.callTool({ name: 'list_conversations', arguments: { limit: 1 } })
+    await client.callTool({ name: 'read_messages', arguments: { conversationId, limit: 2 } })
+    await client.callTool({ name: 'read_attachment', arguments: { conversationId, attachmentId: randomUUID() } })
+    await client.callTool({ name: 'post_message', arguments: { conversationId, body: '지정한 방 의견' } })
+    expect(seen.some((r) => r.url === `/api/agent/messages?conversationId=${conversationId}&limit=2`)).toBe(true)
+    expect(seen.some((r) => r.url.startsWith('/api/agent/attachments/') && r.url.endsWith(`?conversationId=${conversationId}`))).toBe(true)
+    expect(JSON.parse(seen.at(-1)!.body)).toEqual({ conversationId, body: '지정한 방 의견' })
   } finally { await client.close(); http.close(); http.closeAllConnections() }
 })
 

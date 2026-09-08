@@ -30,7 +30,7 @@ it('실제 HTTP MCP 클라이언트 두 명이 서로 다른 채널을 읽고 �
       const client = new Client({ name: 'remote-test', version: '1' })
       clients.push(client)
       await client.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`), { requestInit: { headers: { authorization: item.authorization } } }))
-      expect((await client.listTools()).tools).toHaveLength(5)
+      expect((await client.listTools()).tools).toHaveLength(7)
     }
     const [ca, cb] = clients as [Client, Client]
     const contexts = await Promise.all(clients.map((c) => c.callTool({ name: 'get_channel' })))
@@ -84,4 +84,30 @@ it('도구 목록 요청도 연결별 속도 제한을 적용한다', async () =
     }
     expect((await app.inject({ method: 'POST', url: '/mcp', headers: { ...headers, authorization: a.authorization }, payload: initialize })).statusCode).toBe(429)
   } finally { await app.close() }
+})
+
+it('개인 MCP 하나로 Seo 대화를 찾아 인용 답장하고 해제 후 같은 클라이언트의 접근을 차단한다', async () => {
+  const { app, owner, peer } = await setup()
+  const client = new Client({ name: 'personal-agent-test', version: '1' })
+  try {
+    const b = await testDb.user.findUniqueOrThrow({ where: { email: 'b@goldenlabs.dev' } })
+    await testDb.user.update({ where: { id: b.id }, data: { name: 'Adam Seo' } })
+    const dm = (await app.inject({ method: 'POST', url: '/api/conversations', headers: { cookie: owner }, payload: { type: 'dm', otherUserId: b.id } })).json()
+    const question = (await app.inject({ method: 'POST', url: `/api/conversations/${dm.id}/messages`, headers: { cookie: peer }, payload: { body: '어떻게 이미지를 보내나요?' } })).json()
+    const agent = (await app.inject({ method: 'POST', url: '/api/agents', headers: { cookie: owner }, payload: { name: '개인 Codex', scope: 'ALL' } })).json()
+    const url = await app.listen({ host: '127.0.0.1', port: 0 })
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`), { requestInit: { headers: { authorization: `Bearer ${agent.token}` } } }))
+    const list = unpack(await client.callTool({ name: 'list_conversations', arguments: {} }))
+    expect(list.items).toEqual([expect.objectContaining({ id: dm.id, displayName: 'Adam Seo', type: 'DM' })])
+    expect(unpack(await client.callTool({ name: 'get_conversation', arguments: { conversationId: dm.id } })).displayName).toBe('Adam Seo')
+    expect(unpack(await client.callTool({ name: 'read_messages', arguments: { conversationId: dm.id } })).items[0].id).toBe(question.id)
+    expect(unpack(await client.callTool({ name: 'search_messages', arguments: { conversationId: dm.id, query: '이미지' } })).items[0].id).toBe(question.id)
+    expect((await client.callTool({ name: 'post_message', arguments: { body: '잘못된 목적지 추정' } })).isError).toBe(true)
+    const reply = unpack(await client.callTool({ name: 'post_message', arguments: { conversationId: dm.id, body: '입력창에 이미지를 붙여넣고 보내기를 누르세요.', replyToId: question.id } }))
+    expect(reply.conversationId).toBe(dm.id)
+    await app.inject({ method: 'PUT', url: `/api/conversations/${dm.id}/agents/${agent.id}`, headers: { cookie: owner }, payload: { excluded: true } })
+    expect(unpack(await client.callTool({ name: 'list_conversations', arguments: {} })).items).toEqual([])
+    expect((await client.callTool({ name: 'read_messages', arguments: { conversationId: dm.id } })).isError).toBe(true)
+    expect((await client.callTool({ name: 'post_message', arguments: { conversationId: dm.id, body: '해제 후 답장' } })).isError).toBe(true)
+  } finally { await client.close(); await app.close() }
 })
