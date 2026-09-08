@@ -1,6 +1,27 @@
 node_modules/
+.pnpm-store/
 dist/
 .env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+!*.env.example
+deuce-connection*.json
+client_secret_*.json
+*-credentials.json
+*.pem
+*.p12
+*.pfx
+.DS_Store
+.private/
+# Local deployment evidence can contain account/channel identifiers.
+docs/handoff/*-receipt.json
 *.log
 uploads/
 uploads-test/
+__pycache__/
+apps/desktop/release/
+apps/desktop/release-windows/
+
+apps/desktop/build/google-desktop.json

@@ -6,6 +6,7 @@ import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
 import type { FileStorage } from '../storage.js'
+import { requestTrace } from '../observability.js'
 
 export interface AttachmentDeps {
   storage: FileStorage
@@ -66,6 +67,9 @@ export const attachmentRoutes: FastifyPluginAsync<AttachmentDeps> = async (app, 
       include: messageInclude,
     })
     const dto = toMessageDto(created)
+    const trace = requestTrace.getStore()
+    if (trace) trace.messageId = created.id
+    req.log.info({ event: 'attachment.persisted', traceId: trace?.traceId, messageId: created.id, bytes: size }, 'attachment persisted')
     app.io.to(`convo:${id}`).emit(RT.messageNew, dto)
     return reply.code(201).send(dto)
   })

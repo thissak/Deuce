@@ -3,6 +3,8 @@ import { RT, RTC, type MessageDto, type PresenceSnapshot } from '@deuce/shared'
 import { conversationKey, conversationsKey, messagesKey, presenceKey } from '../api/queries'
 import { appendMessage, patchPresence, replaceMessage, type MessagesData } from './cache'
 import type { AppSocket } from './socket'
+import { errorType, record } from '../diagnostics/recorder'
+import { DiagnosticEventSchema } from '@deuce/shared'
 
 export function attachRealtime(
   socket: AppSocket,
@@ -54,9 +56,27 @@ export function attachRealtime(
     qc.setQueryData<PresenceSnapshot>(presenceKey, (map) => patchPresence(map, p))
   }
   const onConnect = () => {
+    const name = socket.io?.engine?.transport?.name
+    record('socket.connect', { transport: name === 'websocket' || name === 'polling' ? name : 'other' })
     // 룸 조인이 비동기라 접속 직후 이벤트 공백 가능 + 재접속 시 놓친 이벤트 — 전체 재동기화 (스펙 §5)
     void qc.invalidateQueries()
   }
+  const onDisconnect = (reason: string) => record('socket.disconnect', {
+    reason: DiagnosticEventSchema.shape.reason.safeParse(reason).success
+      ? reason as 'io server disconnect' | 'io client disconnect' | 'ping timeout' | 'transport close' | 'transport error' : 'other',
+  })
+  const onError = (error: Error) => record('socket.error', { errorType: errorType(error) })
+  const onReconnect = (count: number) => record('socket.reconnect', { count })
+  const onEvent = (name: string, payload: unknown) => {
+    const parsed = DiagnosticEventSchema.shape.socketEvent.safeParse(name)
+    if (!parsed.success) return
+    const id = typeof payload === 'object' && payload !== null && 'id' in payload ? payload.id : undefined
+    record('socket.event', { socketEvent: parsed.data, ...(typeof id === 'string' ? { messageId: id } : {}) })
+  }
+  socket.on('disconnect', onDisconnect)
+  socket.on('connect_error', onError)
+  socket.io?.on('reconnect_attempt', onReconnect)
+  socket.onAny?.(onEvent)
 
   socket.on(RT.messageNew, onNew)
   socket.on(RT.messageUpdated, onUpdated)
@@ -70,6 +90,10 @@ export function attachRealtime(
   socket.on('connect', onConnect)
 
   return () => {
+    socket.off('disconnect', onDisconnect)
+    socket.off('connect_error', onError)
+    socket.io?.off('reconnect_attempt', onReconnect)
+    socket.offAny?.(onEvent)
     socket.off(RT.messageNew, onNew)
     socket.off(RT.messageUpdated, onUpdated)
     socket.off(RT.messageDeleted, onDeleted)

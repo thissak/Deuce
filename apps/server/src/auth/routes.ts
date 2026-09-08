@@ -31,7 +31,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps): Promise<
     try {
       profile = await exchange(code)
     } catch (err) {
-      req.log.error(err)
+      req.log.error({ err }, 'Google code exchange failed')
       return reply.code(401).send({ error: 'login failed' })
     }
     const email = profile.email.toLowerCase()

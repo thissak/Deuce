@@ -5,6 +5,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from '../api/http'
 import { ActivityPage } from './ActivityPage'
 import { ChatPage } from './ChatPage'
+import { setDiagnostics } from '../diagnostics/recorder'
 
 export function Shell({ me }: { me: UserDto }) {
   const [notifyAsked, setNotifyAsked] = useState(
@@ -21,6 +22,7 @@ export function Shell({ me }: { me: UserDto }) {
         <NavLink to="/activity" className="appbar-item">활동</NavLink>
         <NavLink to="/chat" className="appbar-item">채팅</NavLink>
         <div className="appbar-spacer" />
+        <button className="appbar-item" onClick={() => setDiagnostics(true)}>진단</button>
         <div className="appbar-me" title={me.email}>
           <span className="avatar">{me.name.slice(0, 1)}</span>
         </div>
