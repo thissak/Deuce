@@ -72,6 +72,9 @@ ADR 011의 **신규 등록 기본 범위**를 변경하고 요청 시 AI 실행�
 - 임시 빈 작업 폴더에서 CLI 비대화형 모드를 실행하고 끝나면 제거한다. Codex는 사용자 설정을
   로드하지 않고 read-only sandbox·shell/hooks/plugins/multi_agent 비활성화를 적용한다.
   Claude는 safe-mode·빈 tools·strict-mcp-config·dontAsk를 사용한다. 범용 명령 실행기를 노출하지 않는다.
+- CLI 프로세스 실행은 Execa 10.0.1로 통일한다. Windows의 npm .cmd 진입점·공백 경로를 처리하고
+  cancelSignal/timeout/killDescendants로 CLI가 만든 하위 프로세스까지 종료한다. Windows에서 execFile이
+  .cmd를 실행하지 못하는 공식 제약과, 취소 후 자식이 남는 로컬 재현을 근거로 표준 라이브러리를 채택했다.
 - CLI의 정상 최종 결과만 길이를 검증해 원래 질문을 인용하는 AI 메시지로 저장한다.
   도중 출력/실패 이벤트를 최종 답변으로 게시하지 않는다.
 - 영상통화, 이미지/PDF 해석, OCR·색인, 인터넷 조사, 자동 감시, PC 로컬 파일 탐색은 이 실행기의 범위가 아니다.
@@ -98,6 +101,8 @@ Prisma는 거래/관계 조건, PostgreSQL은 잠금/중복 배제, Socket.IO는
 - [Socket.IO 이벤트](https://socket.io/docs/v4/emitting-events/)
 - [Node events.on과 취소](https://nodejs.org/api/events.html#eventsonemitter-eventname-options)
 - [PostgreSQL 행 잠금](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
+- [Execa 종료·하위 프로세스 관리](https://github.com/sindresorhus/execa/blob/v10.0.1/docs/termination.md)
+- [Node Windows .cmd 실행 제약](https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows)
 - [Electron safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage)
 
 실제 모델/브라우저/회귀 결과는 [구현 이관](../handoff/2026-09-08-ai-invite-implementation.md)에 기록한다.
