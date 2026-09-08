@@ -85,3 +85,20 @@ it('재시작 후 남은 만료 요청은 한 번 실패 기록을 남기고 새
     expect(await testDb.message.count({ where: { replyToId: question.id, system: true } })).toBe(1)
   } finally { socket.disconnect(); await app.close() }
 })
+it('삭제한 AI 질문 원문을 다른 참여자에게 실행 상태 응답으로 다시 노출하지 않는다', async () => {
+  const { app, socket, cookie, peerCookie, room, agent } = await fixture()
+  try {
+    socket.on('run', task => socket.emit('result', { id: task.id, body: '답변 완료' }))
+    const a = await testDb.agentConnection.findUniqueOrThrow({ where: { id: agent.id } })
+    const id = randomUUID()
+    await app.inject({ method: 'POST', url: `/api/conversations/${room.id}/messages`, headers: { cookie },
+      payload: { body: '@Codex 삭제할 비밀 질문', mentions: [a.userId], clientMessageId: id } })
+    await vi.waitFor(async () => expect((await testDb.agentRun.findUniqueOrThrow({ where: { id } })).status).toBe('COMPLETED'))
+    expect((await app.inject({ method: 'DELETE', url: `/api/messages/${id}`, headers: { cookie } })).statusCode).toBe(204)
+    const response = await app.inject({ url: `/api/conversations/${room.id}/agent-requests/${id}`, headers: { cookie: peerCookie } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ id, status: 'COMPLETED' })
+    expect(response.body).not.toContain('삭제할 비밀 질문')
+    expect(response.json()).not.toHaveProperty('prompt')
+  } finally { socket.disconnect(); await app.close() }
+})
