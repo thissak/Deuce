@@ -1,9 +1,11 @@
 import { buildApp } from './app.js'
 import { resolve } from 'node:path'
 import { serveWeb } from './web.js'
+import { serveDownloads } from './downloads.js'
 
 const app = await buildApp()
 if (process.env.WEB_DIST_DIR) await serveWeb(app, resolve(process.env.WEB_DIST_DIR))
+if (process.env.DESKTOP_DOWNLOAD_DIR) await serveDownloads(app, resolve(process.env.DESKTOP_DOWNLOAD_DIR))
 const port = Number(process.env.PORT ?? 4000)
 await app.listen({ port, host: process.env.HOST ?? '127.0.0.1' })
 

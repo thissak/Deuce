@@ -9,6 +9,7 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   GOOGLE_CALLBACK_URL: z.string().url(),
+  GOOGLE_DESKTOP_CLIENT_ID: z.string().min(1).optional(),
   ALLOWED_EMAILS: z.string().min(1),
   NODE_ENV: z.string().default('development'),
   UPLOAD_DIR: z.string().default('./uploads'),
@@ -18,7 +19,7 @@ const EnvSchema = z.object({
 export interface AppConfig {
   port: number
   sessionKey: Buffer
-  google: { clientId: string; clientSecret: string; callbackUrl: string }
+  google: { clientId: string; clientSecret: string; callbackUrl: string; desktopClientId?: string }
   allowedEmails: string[]
   isProd: boolean
   uploadDir: string
@@ -34,6 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       clientId: parsed.GOOGLE_CLIENT_ID,
       clientSecret: parsed.GOOGLE_CLIENT_SECRET,
       callbackUrl: parsed.GOOGLE_CALLBACK_URL,
+      desktopClientId: parsed.GOOGLE_DESKTOP_CLIENT_ID,
     },
     allowedEmails: parsed.ALLOWED_EMAILS.split(',')
       .map((e) => e.trim().toLowerCase())

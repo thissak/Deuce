@@ -3,7 +3,7 @@ import secureSession from '@fastify/secure-session'
 import multipart from '@fastify/multipart'
 import { loadConfig, type AppConfig } from './config.js'
 import { authRoutes } from './auth/routes.js'
-import { createGoogleCodeExchanger, type GoogleCodeExchanger } from './auth/google.js'
+import { createGoogleCodeExchanger, createDesktopTokenVerifier, type GoogleCodeExchanger, type GoogleIdTokenVerifier } from './auth/google.js'
 import { authPlugin } from './plugins/auth.js'
 import { userRoutes } from './routes/users.js'
 import { conversationRoutes } from './routes/conversations.js'
@@ -18,12 +18,14 @@ import { randomUUID } from 'node:crypto'
 import { logSerializers, setupObservability } from './observability.js'
 import { agentManagementRoutes, agentAccessRoutes } from './routes/agents.js'
 import { diagnosticRoutes } from './routes/diagnostics.js'
+import { desktopAuthRoutes } from './auth/desktop.js'
 import { mcpRoutes } from './routes/mcp.js'
 
 export interface AppOptions {
   config?: AppConfig
   // Task 4에서 사용: 테스트가 구글 코드 교환을 페이크로 대체한다
   exchangeGoogleCode?: GoogleCodeExchanger
+  verifyDesktopToken?: GoogleIdTokenVerifier
 }
 
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
@@ -68,6 +70,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   app.get('/health', async () => ({ status: 'ok' }))
   const exchange = opts.exchangeGoogleCode ?? createGoogleCodeExchanger(config)
   await app.register(authRoutes, { config, exchange })
+  await app.register(desktopAuthRoutes, { config, verify: opts.verifyDesktopToken ?? createDesktopTokenVerifier(config) })
 
   await app.register(userRoutes, { prefix: '/api' })
   await app.register(conversationRoutes, { prefix: '/api' })

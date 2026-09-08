@@ -27,5 +27,6 @@
     "typescript": "^7.0.2",
     "vite": "^7.1.9",
     "vitest": "^4.1.11"
-  }
+  },
+  "license": "Apache-2.0"
 }

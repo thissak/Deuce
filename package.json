@@ -6,9 +6,10 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm --parallel --filter @deuce/server --filter @deuce/web dev",
-    "build": "pnpm --filter @deuce/web build && pnpm --filter @deuce/mcp build"
+    "build": "pnpm --filter @deuce/web build && pnpm --filter @deuce/mcp build && pnpm --filter @deuce/desktop build"
   },
   "engines": {
     "node": ">=24 <27"
-  }
+  },
+  "license": "Apache-2.0"
 }

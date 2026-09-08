@@ -14,13 +14,13 @@ export interface TestApp {
 }
 
 export async function makeTestApp(overrides: Partial<AppOptions> = {}): Promise<TestApp> {
-  let profile: GoogleProfile = { email: 'a@goldenlabs.dev', name: 'A', avatarUrl: null }
+  let profile: GoogleProfile = { sub: 'google:a@goldenlabs.dev', email: 'a@goldenlabs.dev', name: 'A', avatarUrl: null }
   const app = await buildApp({
     exchangeGoogleCode: async () => profile,
     ...overrides,
   })
   async function loginAs(email: string, name = email.split('@')[0]!): Promise<string> {
-    profile = { email, name, avatarUrl: null }
+    profile = { sub: `google:${email}`, email, name, avatarUrl: null }
     const start = await app.inject({ method: 'GET', url: '/auth/google' })
     const state = new URL(start.headers.location as string).searchParams.get('state')!
     const cb = await app.inject({

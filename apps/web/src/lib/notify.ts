@@ -19,6 +19,7 @@ export function maybeNotify(
   const body = m.attachments.length > 0 ? `📎 ${m.attachments[0]!.fileName}` : truncate(m.body, 80)
   const n = new Notification(m.author.name, { body })
   n.onclick = () => {
+    (window as Window & { deuceDesktop?: { focus: () => void } }).deuceDesktop?.focus()
     window.focus()
     onOpen(m.conversationId)
   }

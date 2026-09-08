@@ -19,6 +19,8 @@ Deuce를 **중앙 채팅 서비스 + 프로젝트 사이트 임베드 모듈**�
 ## 2. 사용자와 규모 가정
 
 - 골든랩 내부 구성원·협업자 전용. 단일 조직, 멀티테넌트 없음.
+- 접속은 각자의 외부 네트워크에서 인터넷으로 한다. 동일 사내망을 전제하지 않는다
+  (2026-09-07 감독 설명). 허용된 개별 Google 계정으로 접근한다.
 - 동시 사용자 수십 명 이하. 서버 프로세스 1개 + PostgreSQL 1개로 충분한
   규모이며, Redis·메시지큐·수평 확장은 설계에 포함하지 않는다.
 
@@ -136,10 +138,12 @@ deuce/
 
 ## 9. 배포·운영
 
-- GCP 소형 VM 1대 + Docker Compose(server, PostgreSQL, Caddy TLS)
+- 2026-09-07 [ADR 005](../adr/005-shared-vm-web-deployment.md)로 초기 테스트 배포 구성 변경:
+  기존 gatelab-vm + systemd(Node 서버·웹 정적 파일) + 별도 Cloudflare Tunnel.
+  PostgreSQL 17은 기존 프로세스를 사용하고 DB·역할은 deuce 전용으로 분리한다.
 - 도메인: `deuce.goldenlabs.dev`
-- 파일·업데이트 피드: GCS 버킷
-- 백업: PostgreSQL 일일 덤프 → GCS
+- 초기 파일: VM 영속 디렉터리. GCS 파일 드라이버·Electron 업데이트 피드는 후속 작업.
+- 백업: PostgreSQL 일일 덤프·첨부·설정 → 비공개 GCS, 30일 보존. 복원 검증 포함.
 - 인프라 생성·변경은 감독 승인 후 실행한다 (글로벌 Execution Boundaries)
 
 ## 10. 테스트 전략

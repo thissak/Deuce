@@ -1,40 +1,68 @@
-# Deuce
+# Deuce · 듀스
 
-Microsoft Teams와 같은 기능 범위의 팀 커뮤니케이션·협업 프로그램. 프로젝트
-운영 규칙과 상태 문서는 `CLAUDE.md`와 `docs/`를 참고한다.
+**사람과 각자의 AI가 같은 채널에서 함께 대화하는 오픈소스 메신저.**
+Teams·Slack에서 참고한 채팅 경험에 사용자가 자신의 AI를 MCP로 연결하는 기능을 더합니다.
+현재 공개 개발을 준비하는 초기 버전이며 영상통화는 범위에서 제외합니다.
 
-## 부트스트랩
+## 지금 할 수 있는 것
+
+- 1:1·그룹·채널 채팅, 실시간 수신, 인용 답장·수정·삭제·반응·고정
+- 파일 첨부·공유 목록, 검색, 멘션·활동, 읽음 상태·프레즌스·알림
+- 사용자별 Codex·Claude Code 등 MCP 연결, 채널 대화/첨부 읽기·검색·AI 글쓰기
+- 웹 앱, Mac·Windows 앱, 버전 확인과 사용자 선택에 따른 다운로드·설치
+- 서버와 브라우저를 연결해 보는 선택적 진단 로그
+
+AI 자동 감시·응답, 자료 OCR/색인, 서버 간 연합, 영상통화는 아직 없습니다.
+Mac arm64의 실제 업데이트는 확인했고 Windows·Intel Mac 업데이트 실기 검증은 남아 있습니다.
+
+## 시작하기
+
+| 목적 | 안내 |
+|---|---|
+| 실행하고 기여하기 | [로컬 개발](docs/getting-started.md) · [기여 안내](CONTRIBUTING.md) |
+| 내 서버 운영하기 | [서버 설치와 앱 제작](docs/self-hosting.md) |
+| 내 AI 연결하기 | [MCP 연결 안내](docs/ai-connections.md) |
+| 완료/미완료 확인 | [진행 상태](docs/PROGRESS.md) · [변경 이력](docs/CHANGELOG.md) |
+| 문제·아이디어 제안 | [GitHub Issues](https://github.com/thissak/Deuce/issues) |
+| 보안 제보 | [보안 안내](SECURITY.md) |
+
+Node 24/26, pnpm 11.24.0, PostgreSQL 16을 사용합니다. 자동 테스트와 소스 빌드는
+Google 자격증명이나 운영자의 GCP 권한 없이 실행됩니다. 실제 로그인에는 자신의 Google OAuth가 필요합니다.
 
 ```bash
-pnpm install
-docker compose up -d
-cp apps/server/.env.example apps/server/.env   # 값 채우기 (아래 참고)
-pnpm --filter @deuce/server db:migrate
+pnpm install --frozen-lockfile
+docker compose up -d --wait
+pnpm --filter @deuce/server exec prisma generate
 pnpm --filter @deuce/server db:migrate:test
-pnpm dev     # apps/server 개발 서버 기동
-pnpm test    # 전체 테스트
+pnpm test
+pnpm typecheck
+pnpm build
 ```
 
-`apps/server/.env`는 커밋하지 않는다. 최소한 다음 값을 채워야 서버가
-기동한다:
+설치 도구 준비·웹 실행·로그인은 [로컬 개발 가이드](docs/getting-started.md)를 따릅니다.
 
-- `SESSION_KEY_HEX`: `openssl rand -hex 32`로 생성한 64자 hex 문자열
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: 로컬 개발에서는 더미 값으로도
-  서버 기동은 가능하다 (실제 구글 로그인에는 유효한 OAuth 클라이언트 필요)
+## 코드와 운영 서버
 
-## Postgres 볼륨 주의
+`deuce.goldenlabs.dev`는 유지관리자의 초대형 테스트 인스턴스입니다. 소스 공개 후에도
+VM·비용·운영 데이터·사용자 초대는 운영자가 관리합니다. 외부 기여자는 자신의 로컬 환경이나
+자체 서버를 사용하며 운영 서버 접근 권한을 받지 않습니다.
 
-`docker/postgres-init.sql`은 `pgdata` 볼륨을 **처음 생성할 때만** 실행되어
-`deuce_test` DB를 만든다. 이미 존재하는 `pgdata` 볼륨으로 컨테이너를 다시
-띄운 경우(예: 볼륨을 지우지 않고 재시작) `deuce_test`가 없을 수 있다. 이
-때는 직접 생성한다:
+자체 서버 비용은 해당 운영자가 부담합니다. 서로 채팅하려는 사람들은 같은 서버를 사용합니다.
+CI는 GitHub 호스팅 러너에서 코드를 검증하며 운영 VM에 자동 배포하지 않습니다.
 
-```bash
-docker exec <postgres-container> psql -U deuce -c "CREATE DATABASE deuce_test;"
-```
+## 구조
 
-## 요구 사항
+| 경로 | 역할 |
+|---|---|
+| `apps/server` | Fastify API·Google 로그인·Socket.IO·원격 MCP, Prisma/PostgreSQL |
+| `apps/web` | React/Vite 웹 앱 |
+| `apps/desktop` | Electron 앱·기본 브라우저 로그인·업데이트 |
+| `apps/mcp` | 공식 MCP SDK 기반 도구와 stdio 커넥터 |
+| `packages/shared` | 클라이언트·서버 타입/스키마 계약 |
+| `deploy` | 자체 운영에 맞게 수정해서 쓰는 예제 |
 
-- Node 26, pnpm 11 (`packageManager` 필드로 고정)
-- Prisma/`@prisma/client`는 `6.19.3`으로 고정한다 — 사유는
-  `docs/adr/003-prisma-6-pin.md` 참고
+## 라이선스
+
+Deuce 소스 코드와 문서는 [Apache License 2.0](LICENSE)을 따릅니다.
+외부 라이브러리·런타임의 라이선스와 고지는 별도로 유지합니다.
+[외부 의존성 안내](THIRD_PARTY_NOTICES.md)를 참고하세요.
