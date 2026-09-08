@@ -772,7 +772,7 @@ describe('google login', () => {
   it('rejects an email outside the allowlist with 403', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
-        email: 'outsider@gmail.com',
+        email: 'outsider@example.com',
         name: 'X',
         avatarUrl: null,
       }),

@@ -27,6 +27,7 @@ describe('google login', () => {
   it('logs in an allowed user and serves /auth/me', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: '테스터',
         avatarUrl: null,
@@ -50,7 +51,8 @@ describe('google login', () => {
   it('rejects an email outside the allowlist with 403', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
-        email: 'outsider@gmail.com',
+        sub: 'google:outsider@example.com',
+        email: 'outsider@example.com',
         name: 'X',
         avatarUrl: null,
       }),
@@ -62,6 +64,7 @@ describe('google login', () => {
   it('rejects a mismatched oauth state with 400', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: 'A',
         avatarUrl: null,
@@ -92,6 +95,7 @@ describe('google login', () => {
   it('rejects a replayed callback state after a successful login with 400', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: '테스터',
         avatarUrl: null,
@@ -118,6 +122,7 @@ describe('google login', () => {
   it('sets HttpOnly and SameSite=Lax on the session cookie', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: '테스터',
         avatarUrl: null,
@@ -137,6 +142,7 @@ describe('google login', () => {
   it('clears the session cookie on logout and locks out a browser using the cleared cookie', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: '테스터',
         avatarUrl: null,
@@ -167,6 +173,7 @@ describe('google login', () => {
   it('returns 401 for a session whose user was deleted', async () => {
     const app = await buildApp({
       exchangeGoogleCode: async () => ({
+        sub: 'google:a@goldenlabs.dev',
         email: 'a@goldenlabs.dev',
         name: '테스터',
         avatarUrl: null,

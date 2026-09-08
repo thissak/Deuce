@@ -4,6 +4,7 @@ import type { AppConfig } from '../config.js'
 import { prisma } from '../db.js'
 import { createAuthUrl, type GoogleCodeExchanger } from './google.js'
 import './session.js'
+import { googleUser } from './user.js'
 
 export interface AuthDeps {
   config: AppConfig
@@ -38,11 +39,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps): Promise<
     if (!config.allowedEmails.includes(email)) {
       return reply.code(403).send({ error: 'not allowed' })
     }
-    const user = await prisma.user.upsert({
-      where: { email },
-      create: { email, name: profile.name, avatarUrl: profile.avatarUrl },
-      update: { name: profile.name, avatarUrl: profile.avatarUrl },
-    })
+    const user = await googleUser(profile)
     req.session.set('userId', user.id)
     return reply.redirect('/')
   })

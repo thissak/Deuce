@@ -29,7 +29,7 @@
 
 ## 작업 위치·상태
 
-- 경로: `/Users/showmethemoney/Documents/Deuce`
+- 경로: `<repository-root>`
 - 브랜치: `fix/6-search-shared-tab`, HEAD `558fc88` (기존 main과 같은 커밋).
 - 미커밋 변경: `ChatView.tsx`, `test/jump.test.tsx`, `docs/PROGRESS.md`,
   `docs/CHANGELOG.md`, `docs/issues/6-search-shared-tab.md`, 이 문서.

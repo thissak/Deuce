@@ -1,0 +1,30 @@
+{
+  "name": "@deuce/desktop",
+  "version": "0.1.2",
+  "private": true,
+  "description": "Deuce desktop chat",
+  "author": "Goldenlabs",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build/build.cjs",
+    "dev": "pnpm build && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package:mac": "pnpm build && electron-builder --config build/package.cjs --mac --arm64 --x64 --publish never",
+    "package:win": "pnpm build && electron-builder --config build/package.cjs --win --x64 --publish never"
+  },
+  "dependencies": {
+    "cookie": "2.0.1",
+    "electron-updater": "6.8.9",
+    "google-auth-library": "11.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "electron": "44.2.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "license": "Apache-2.0"
+}

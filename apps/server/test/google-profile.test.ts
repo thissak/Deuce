@@ -21,6 +21,7 @@ describe('profileFromIdTokenPayload', () => {
   it('maps a verified payload to a profile', () => {
     const profile = profileFromIdTokenPayload(payload())
     expect(profile).toEqual({
+      sub: 'sub-123',
       email: 'a@goldenlabs.dev',
       name: '테스터',
       avatarUrl: 'https://example.com/a.png',
