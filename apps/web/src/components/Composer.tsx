@@ -1,6 +1,6 @@
 import { MessageDtoSchema, type MessageDto, type UserDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { ApiError, apiJson } from '../api/http'
 import { messagesKey, sharedKey } from '../api/queries'
 import { formatBytes, isImage } from '../lib/format'
@@ -125,6 +125,14 @@ export function Composer({
     setMultiDropNotice(accepted && files.length > 1)
   }
 
+  const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = Array.from(e.clipboardData.files).filter((f) => isImage(f.type))
+    if (images.length === 0) return
+    const accepted = pickFile(images[0]!)
+    setMultiDropNotice(accepted && images.length > 1)
+    // 기본 붙여넣기를 막지 않아 이미지와 함께 복사된 일반 텍스트도 입력창에 남는다.
+  }
+
   // 텍스트 전송과 첨부 업로드를 한 mutation으로 묶는다 — 미해결 payload는 항상 하나뿐이고,
   // TanStack이 이미 variables·isPending·isError·reset()으로 그 payload와 상태를 들고 있다
   const outgoing = useMutation({
@@ -198,6 +206,7 @@ export function Composer({
       onDrop={onDrop}
     >
       {fileError && <div className="composer-error">{fileError}</div>}
+      {outgoing.isPending && <div className="composer-hint" role="status">{outgoing.variables.file ? '파일 업로드 중…' : '전송 중…'}</div>}
       {failed && (
         <div className="composer-error" role="alert">
           전송에 실패했습니다. 재전송하거나 버린 뒤 새 메시지를 보낼 수 있습니다:{' '}
@@ -219,6 +228,7 @@ export function Composer({
           📎 {file.name} <span className="size">({formatBytes(file.size)})</span>
           <button
             className="chip-close"
+            aria-label="첨부 제거"
             onClick={() => {
               setFile(null)
               setMultiDropNotice(false)
@@ -266,6 +276,7 @@ export function Composer({
             onKeyUp={refreshMention}
             onClick={refreshMention}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             rows={1}
           />
           {candidates.length > 0 && (

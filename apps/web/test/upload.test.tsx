@@ -168,7 +168,7 @@ describe('첨부 업로드', () => {
     const fn = vi.fn()
     renderComposer(fn)
     await userEvent.upload(screen.getByTestId('file-input'), new File(['hello'], 'a.txt'))
-    await userEvent.click(screen.getByRole('button', { name: '✕' }))
+    await userEvent.click(screen.getByRole('button', { name: '첨부 제거' }))
     expect(screen.queryByText(/a\.txt/)).toBeNull()
     expect((screen.getByText('보내기') as HTMLButtonElement).disabled).toBe(true)
   })
@@ -208,7 +208,7 @@ describe('첨부 이미지 미리보기', () => {
   it('칩의 ✕로 파일을 빼면 미리보기 URL을 해제한다', async () => {
     renderComposer(vi.fn())
     await userEvent.upload(screen.getByTestId('file-input'), new File(['x'], 'a.png', { type: 'image/png' }))
-    await userEvent.click(screen.getByRole('button', { name: '✕' }))
+    await userEvent.click(screen.getByRole('button', { name: '첨부 제거' }))
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview1')
   })
 
