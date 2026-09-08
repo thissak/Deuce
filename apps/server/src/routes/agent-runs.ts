@@ -3,7 +3,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { Prisma } from '@prisma/client'
 import rateLimit from '@fastify/rate-limit'
 import { z } from 'zod'
-import { RT } from '@deuce/shared'
+import { AgentRunSchema, RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { isAgentActive, agentConversationWhere } from '../domain/agents.js'
@@ -24,7 +24,7 @@ export const agentRunRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (
     if (previous) {
       if (previous.agentId !== agentId || previous.conversationId !== id || previous.requestedById !== req.currentUser.id || previous.prompt !== p.data.prompt)
         return reply.code(409).send({ error: 'request id already used' })
-      return previous
+      return AgentRunSchema.parse(previous)
     }
     const a = await prisma.agentConnection.findUnique({ where: { id: agentId }, include: { owner: true, user: true } })
     if (!a || !isAgentActive(a, config) || !await prisma.conversation.count({ where: { AND: [{ id }, agentConversationWhere(a)] } }))
@@ -39,7 +39,7 @@ export const agentRunRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (
       })
       app.io.to(`convo:${id}`).emit(RT.messageNew, toMessageDto(question))
       app.agentRuntime.start(run)
-      return reply.code(202).send(run)
+      return reply.code(202).send(AgentRunSchema.parse(run))
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return reply.code(409).send({ error: 'AI request already in progress' })
       throw e
@@ -52,6 +52,6 @@ export const agentRunRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (
     const run = await prisma.agentRun.findFirst({ where: { id: runId, conversationId: id } })
     if (!run) return reply.code(404).send({ error: 'AI request not found' })
     reply.header('cache-control', 'no-store')
-    return run
+    return AgentRunSchema.parse(run)
   })
 }
