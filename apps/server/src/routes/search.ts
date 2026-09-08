@@ -9,7 +9,7 @@ const QuerySchema = z.object({ q: z.string().min(2).max(100) })
 interface Row {
   messageId: string
   conversationId: string
-  conversationType: 'DM' | 'GROUP'
+  conversationType: 'DM' | 'GROUP' | 'CHANNEL'
   conversationTitle: string | null
   body: string
   authorName: string

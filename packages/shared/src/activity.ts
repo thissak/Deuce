@@ -4,7 +4,7 @@ import { UserDtoSchema } from './user.js'
 export const SearchResultSchema = z.object({
   messageId: z.string(),
   conversationId: z.string(),
-  conversationType: z.enum(['DM', 'GROUP']),
+  conversationType: z.enum(['DM', 'GROUP', 'CHANNEL']),
   conversationTitle: z.string().nullable(),
   body: z.string(),
   authorName: z.string(),

@@ -2,7 +2,7 @@ import type { Prisma, User } from '@prisma/client'
 import type { MessageDto, UserDto } from '@deuce/shared'
 
 export function toUserDto(u: User): UserDto {
-  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl }
+  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, ...(u.isAgent ? { isAgent: true } : {}) }
 }
 
 export const messageInclude = {

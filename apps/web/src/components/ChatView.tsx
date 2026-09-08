@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/http'
 import { conversationDetailQuery, conversationKey, conversationsKey } from '../api/queries'
 import { truncate } from '../lib/format'
+import { AgentSettings } from './AgentSettings'
 import { Composer } from './Composer'
 import { ErrorNotice } from './ErrorNotice'
 import { GroupSettings } from './GroupSettings'
@@ -17,6 +18,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const detail = useQuery(conversationDetailQuery(conversationId))
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
+  const [showAgents, setShowAgents] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [params, setParams] = useSearchParams()
   const jumpToId = params.get('m')
@@ -62,7 +64,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           <span className="avatar">{c.displayName.slice(0, 1)}</span>
           {other && <PresenceDot userId={other.id} />}
         </span>
-        <h3>{c.displayName}</h3>
+        <h3>{c.type === 'CHANNEL' ? '# ' : ''}{c.displayName}</h3>
         <div className="chat-tabs">
           <button className={`chat-tab ${tab === 'chat' ? 'active' : ''}`} onClick={() => setTab('chat')}>채팅</button>
           <button className={`chat-tab ${tab === 'shared' ? 'active' : ''}`} onClick={() => setTab('shared')}>공유</button>
@@ -76,7 +78,8 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           >
             {c.mutedAt ? '🔕' : '🔔'}
           </button>
-          {c.type === 'GROUP' && (
+          {c.type === 'CHANNEL' && <button className="btn-plain" onClick={() => setShowAgents(true)}>AI 연결</button>}
+          {c.type !== 'DM' && (
             <button className="icon-btn" title="그룹 설정" onClick={() => setShowSettings(true)}>⚙️</button>
           )}
         </div>
@@ -108,6 +111,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
       ) : (
         <SharedTab conversationId={conversationId} />
       )}
+      {showAgents && <AgentSettings conversationId={c.id} onClose={() => setShowAgents(false)} />}
       {showSettings && <GroupSettings me={me} detail={c} onClose={() => setShowSettings(false)} />}
     </section>
   )

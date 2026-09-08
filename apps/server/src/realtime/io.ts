@@ -31,7 +31,7 @@ export function setupRealtime(app: FastifyInstance, config: AppConfig): void {
       const userId = session?.get('userId')
       if (!userId) return reject()
       const user = await prisma.user.findUnique({ where: { id: userId } })
-      if (!user || !config.allowedEmails.includes(user.email)) {
+      if (!user || user.isAgent || !config.allowedEmails.includes(user.email)) {
         return reject()
       }
       socket.data.userId = user.id

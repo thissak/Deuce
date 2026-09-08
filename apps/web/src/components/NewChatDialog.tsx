@@ -10,14 +10,15 @@ export function NewChatDialog({ me, onClose }: { me: UserDto; onClose: (conversa
   useEscapeKey(() => onClose())
   const { data: users = [] } = useQuery(usersQuery)
   const [selected, setSelected] = useState<string[]>([])
+  const [channel, setChannel] = useState(false)
   const [title, setTitle] = useState('')
   const candidates = users.filter((u) => u.id !== me.id)
-  const isGroup = selected.length > 1 || title.trim().length > 0
+  const isGroup = channel || selected.length > 1 || title.trim().length > 0
 
   const create = useMutation({
     mutationFn: async () => {
       const payload = isGroup
-        ? { type: 'group', title: title.trim(), memberIds: selected }
+        ? { type: channel ? 'channel' : 'group', title: title.trim(), memberIds: selected }
         : { type: 'dm', otherUserId: selected[0] }
       return ConversationSummarySchema.parse(await apiJson('POST', '/api/conversations', payload))
     },
@@ -28,12 +29,14 @@ export function NewChatDialog({ me, onClose }: { me: UserDto; onClose: (conversa
   })
 
   const disabled =
-    create.isPending || selected.length === 0 || (isGroup && title.trim().length === 0)
+    create.isPending || (!channel && selected.length === 0) || (isGroup && title.trim().length === 0)
 
   return (
     <div className="dialog-backdrop" onClick={() => onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-label="새 채팅" onClick={(e) => e.stopPropagation()}>
         <h3>새 채팅</h3>
+        <label><input type="checkbox" checked={channel} onChange={(e) => setChannel(e.target.checked)} />채널로 만들기</label>
+        {channel && <p>선택한 사람과 AI가 함께 대화하는 공간입니다. 멤버는 나중에 추가할 수 있습니다.</p>}
         <input
           type="text"
           placeholder="그룹 이름 (두 명 이상이면 필수)"

@@ -42,7 +42,7 @@ export function ConversationList({ me, activeId }: { me: UserDto; activeId?: str
               </span>
               <span className="convo-body">
                 <span className="convo-title">
-                  <span>{c.displayName}</span>
+                  <span>{c.type === 'CHANNEL' ? '# ' : ''}{c.displayName}</span>
                   {c.lastMessage && <span className="convo-time">{formatTime(c.lastMessage.createdAt)}</span>}
                 </span>
                 <span className="convo-preview">{previewText(c)}</span>

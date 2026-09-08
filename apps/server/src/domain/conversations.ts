@@ -49,10 +49,10 @@ export async function summarizeConversation(conversationId: string, meId: string
   })
   const others = convo.members.filter((m) => m.userId !== meId)
   const displayName =
-    convo.type === 'GROUP' ? (convo.title ?? '') : (others[0]?.user.name ?? '(알 수 없음)')
+    convo.type !== 'DM' ? (convo.title ?? '') : (others[0]?.user.name ?? '(알 수 없음)')
   return {
     id: convo.id,
-    type: convo.type as 'DM' | 'GROUP',
+    type: convo.type,
     title: convo.title,
     displayName,
     members: convo.members.map((m) => toUserDto(m.user)),
