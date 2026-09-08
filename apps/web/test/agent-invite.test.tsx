@@ -56,3 +56,41 @@ it('초대 실패 시 초안을 보존하며 다른 사람의 오프라인 AI �
   expect((screen.getByRole('button', { name: '요청 보내기' }) as HTMLButtonElement).disabled).toBe(true)
   expect(screen.getByText(/AI가 연결된 PC에서/)).toBeTruthy()
 })
+it.each(['다시 시도', '요청 보내기'])('응답 유실 뒤 %s 한 번은 같은 요청 ID만 재전송한다', async button => {
+  const submitted: { id: string; prompt: string }[] = []
+  let receipt: unknown
+  vi.stubGlobal('fetch', vi.fn(async (url: unknown, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      const body = JSON.parse(init.body as string); submitted.push(body)
+      receipt = { id: body.id, agentId: ai.id, conversationId: 'c1', status: 'COMPLETED', errorCode: null, resultMessageId: 'answer' }
+      if (submitted.length === 1) throw new TypeError('Response lost after server acceptance')
+      return new Response(JSON.stringify(receipt))
+    }
+    if (String(url).includes('/agent-requests/')) return new Response(JSON.stringify(receipt))
+    return new Response(JSON.stringify([{ ...ai, participating: true, excluded: false }]))
+  }))
+  mount(); fireEvent.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
+  fireEvent.click(screen.getByRole('button', { name: '지금까지 요약' }))
+  fireEvent.click(screen.getByRole('button', { name: '요청 보내기' }))
+  await screen.findByText(/요청 결과를 확인하지 못했습니다/)
+  fireEvent.click(screen.getByRole('button', { name: button }))
+  await screen.findByText('AI가 대화에 답했습니다.')
+  expect(submitted).toHaveLength(2)
+  expect(submitted[1]).toEqual(submitted[0])
+})
+it('응답 유실 후 질문을 바꾸면 새로운 요청 ID를 사용한다', async () => {
+  const submitted: { id: string; prompt: string }[] = []
+  vi.stubGlobal('fetch', vi.fn(async (_: unknown, init?: RequestInit) => {
+    if (init?.method === 'POST') { submitted.push(JSON.parse(init.body as string)); throw new TypeError('Response lost') }
+    return new Response(JSON.stringify([{ ...ai, participating: true, excluded: false }]))
+  }))
+  mount(); fireEvent.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
+  fireEvent.click(screen.getByRole('button', { name: '지금까지 요약' }))
+  fireEvent.click(screen.getByRole('button', { name: '요청 보내기' }))
+  await screen.findByText(/요청 결과를 확인하지 못했습니다/)
+  fireEvent.change(screen.getByLabelText('요청 내용'), { target: { value: '다른 질문입니다.' } })
+  fireEvent.click(screen.getByRole('button', { name: '요청 보내기' }))
+  await waitFor(() => expect(submitted).toHaveLength(2))
+  expect(submitted[1]!.id).not.toBe(submitted[0]!.id)
+  expect(submitted[1]!.prompt).toBe('다른 질문입니다.')
+})

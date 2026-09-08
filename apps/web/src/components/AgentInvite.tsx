@@ -55,7 +55,9 @@ export function AgentInvite({ conversationId }: { conversationId: string }) {
     {asking && <div className="dialog-backdrop" onClick={() => setAsking(false)}><form className="dialog agent-request-dialog" role="dialog" aria-modal="true" aria-label="AI에게 요청" onClick={e => e.stopPropagation()} onSubmit={e => {
       e.preventDefault(); if (!prompt.trim() || waiting) return
       setRunId('')
-      request.mutate({ id: crypto.randomUUID(), agentId: target, prompt: prompt.trim() })
+      const body = prompt.trim(), previous = request.isError ? request.variables : undefined
+      const id = previous?.agentId === target && previous.prompt === body ? previous.id : crypto.randomUUID()
+      request.mutate({ id, agentId: target, prompt: body })
     }}>
       <h3>AI에게 요청</h3><p>이 방의 최근 대화와 텍스트 자료를 바탕으로 함께 답합니다.</p>
       <label>참여 AI<select value={target} onChange={e => setTarget(e.target.value)} disabled={waiting}>{participating.map(a => <option key={a.id} value={a.id}>{a.name} · {a.ownerName}</option>)}</select></label>
