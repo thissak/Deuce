@@ -97,3 +97,17 @@ it('첨부는 같은 채널의 미삭제 파일만 제한 크기 안에서 읽�
     expect((await app.inject({ url: path, headers: { authorization } })).statusCode).toBe(404)
   } finally { await storage.delete(key); await app.close() }
 })
+
+it('AI 검색의 퍼센트·밑줄·역슬래시를 리터럴로 찾는다', async () => {
+  const { app, authorization, c, id } = await setup()
+  try {
+    const agent = await testDb.agentConnection.findUniqueOrThrow({ where: { id } })
+    const bodies = ['100%', '1000', 'snake_case', 'snakeXcase', 'C:\\notes', 'C:notes']
+    await testDb.message.createMany({ data: bodies.map((body) => ({ conversationId: c.id, authorId: agent.userId, body })) })
+    for (const query of ['100%', 'snake_case', 'C:\\notes']) {
+      const res = await app.inject({ url: `/api/agent/messages?query=${encodeURIComponent(query)}`, headers: { authorization } })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().items.map((m: { body: string }) => m.body)).toEqual([query])
+    }
+  } finally { await app.close() }
+})

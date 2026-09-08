@@ -94,7 +94,7 @@ export const agentAccessRoutes: FastifyPluginAsync<{ config: AppConfig; storage:
     const cursor = q.data.cursor ? await prisma.message.findFirst({ where: { id: q.data.cursor, conversationId: a.conversationId } }) : null
     if (q.data.cursor && !cursor) return reply.code(400).send({ error: 'invalid cursor' })
     const items = await prisma.message.findMany({ where: { conversationId: a.conversationId,
-      ...(q.data.query ? { deletedAt: null, body: { contains: q.data.query, mode: 'insensitive' } } : {}),
+      ...(q.data.query ? { deletedAt: null, body: { contains: q.data.query.replace(/[\\%_]/g, (ch) => `\\${ch}`), mode: 'insensitive' } } : {}),
       ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}),
     }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: q.data.limit, include: messageInclude })
     return { items: items.map((m) => {
