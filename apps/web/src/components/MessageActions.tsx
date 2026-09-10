@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { QUICK_REACTIONS, REACTION_PALETTE } from '../lib/messages'
 import { useEscapeKey } from '../lib/useEscapeKey'
+import { FluentEmoji } from './FluentEmoji'
 
 /** Teams 형태 메시지 액션 바 — 반응 4종 · 팔레트 · 수정 · 더보기(회신/고정/삭제) */
 export function MessageActions({
@@ -61,13 +62,13 @@ export function MessageActions({
 
   return (
     <div className="msg-actions" ref={rootRef}>
-      {QUICK_REACTIONS.map((e) => (
-        <button key={e} onClick={() => onToggleReaction(e)}>
-          {e}
+      {QUICK_REACTIONS.map((option) => (
+        <button key={option.emoji} aria-label={option.emoji} title={option.label} onClick={() => onToggleReaction(option.emoji)}>
+          <FluentEmoji emoji={option.emoji} />
         </button>
       ))}
       <button aria-label="반응 추가" onClick={togglePalette}>
-        😊+
+        <FluentEmoji emoji="😊" />+
       </button>
       <span className="msg-actions-divider" />
       {isMine && (
@@ -80,9 +81,14 @@ export function MessageActions({
       </button>
       {paletteOpen && (
         <div className="reaction-palette">
-          {REACTION_PALETTE.map((e) => (
-            <button key={e} onClick={() => pickReaction(e)}>
-              {e}
+          {REACTION_PALETTE.map((option) => (
+            <button
+              key={option.emoji}
+              aria-label={option.emoji}
+              title={option.label}
+              onClick={() => pickReaction(option.emoji)}
+            >
+              <FluentEmoji emoji={option.emoji} />
             </button>
           ))}
         </div>

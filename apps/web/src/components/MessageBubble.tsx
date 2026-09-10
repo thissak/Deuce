@@ -5,6 +5,7 @@ import { api, ApiError, apiJson } from '../api/http'
 import { conversationKey, messagesKey } from '../api/queries'
 import { formatBytes, formatTime, isImage } from '../lib/format'
 import { hasMyReaction } from '../lib/messages'
+import { FluentEmoji } from './FluentEmoji'
 import { renderBody } from '../lib/text'
 import { replaceMessage, type MessagesData } from '../realtime/cache'
 import { ErrorNotice } from './ErrorNotice'
@@ -161,9 +162,10 @@ export function MessageBubble({
               <button
                 key={r.emoji}
                 className={`reaction-chip ${r.userIds.includes(meId) ? 'mine' : ''}`}
+                aria-label={`${r.emoji} ${r.userIds.length}`}
                 onClick={() => toggleReaction(r.emoji)}
               >
-                {r.emoji} {r.userIds.length}
+                <FluentEmoji emoji={r.emoji} /> <span>{r.userIds.length}</span>
               </button>
             ))}
           </div>
