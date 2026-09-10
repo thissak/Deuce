@@ -215,7 +215,7 @@ describe('Composer 멘션', () => {
     renderComposer(fn as unknown as typeof fetch, [me, mate])
     const box = screen.getByRole('textbox')
     await userEvent.type(box, '@김')
-    await userEvent.click(screen.getByRole('button', { name: /김철수/ }))
+    await userEvent.click(screen.getByRole('option', { name: /김철수/ }))
     expect((box as HTMLTextAreaElement).value).toBe('@김철수 ')
     expect(fn).not.toHaveBeenCalled()
   })
@@ -256,21 +256,58 @@ describe('Composer 멘션', () => {
     fireEvent.change(box, { target: { value: '안녕 @ 뒤에도' } })
     box.setSelectionRange(4, 4)
     fireEvent.click(box) // refreshMention이 캐럿 위치를 읽는다
-    fireEvent.mouseDown(screen.getByRole('button', { name: /김철수/ }))
+    fireEvent.mouseDown(screen.getByRole('option', { name: /김철수/ }))
     await waitFor(() => {
       expect(box.value).toBe('안녕 @김철수  뒤에도')
       expect(box.selectionStart).toBe(8) // '안녕 @김철수 ' 바로 뒤 (start 3 + '@'1 + 이름3 + 공백1)
     })
   })
 
-  it("'@'만 입력한 Enter는 멘션 선택이 아니라 전송이다", async () => {
-    const posted = msg({ id: 'new1', conversationId: 'c1', body: '@' })
-    const fn = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(posted), { status: 201, headers: { 'content-type': 'application/json' } }),
-    )
+  it('@만 입력해도 Enter로 첫 후보를 선택하고 전송하지 않는다', async () => {
+    const fn = vi.fn()
     renderComposer(fn as unknown as typeof fetch, [me, mate])
-    await userEvent.type(screen.getByRole('textbox'), '@{Enter}')
-    await waitFor(() => expect(fn).toHaveBeenCalledOnce())
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(box, '@{Enter}')
+    expect(box.value).toBe('@김철수 ')
+    expect(fn).not.toHaveBeenCalled()
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  it('방향키로 후보를 순환하고 Enter로 선택한다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate, { ...mate, id: 'u3', name: '이영희' }])
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(box, '@{ArrowUp}')
+    expect(screen.getByRole('option', { selected: true }).textContent).toContain('이영희')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('option', { selected: true }).textContent).toContain('김철수')
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+    expect(box.value).toBe('@이영희 ')
+    expect(document.activeElement).toBe(box)
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('검색어 변경은 첫 후보로 돌아가고 Escape는 목록을 닫는다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate, { ...mate, id: 'u3', name: '이영희' }])
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(box, '@{ArrowDown}김')
+    expect(screen.getByRole('option', { selected: true }).textContent).toContain('김철수')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(box.value).toBe('@김')
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('한글 조합 중 Enter는 후보 선택이나 전송을 하지 않는다', async () => {
+    const fn = vi.fn()
+    renderComposer(fn as unknown as typeof fetch, [me, mate])
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(box, '@김')
+    fireEvent.keyDown(box, { key: 'Enter', isComposing: true })
+    expect(box.value).toBe('@김')
+    expect(screen.queryByRole('listbox')).not.toBeNull()
+    expect(fn).not.toHaveBeenCalled()
   })
 
   it('본문 앞뒤 공백을 잘라 보낸다', async () => {

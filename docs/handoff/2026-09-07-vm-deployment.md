@@ -9,7 +9,7 @@
 | 앱 / 터널 | deuce.service / cloudflared-deuce.service |
 | 내부 포트 | 127.0.0.1:4010 |
 | 런타임 | /opt/deuce/node (Node 24.20.0), pnpm 11.24.0 |
-| 릴리스 | /opt/deuce/releases/20260908-03 |
+| 릴리스 | /opt/deuce/releases/20260911-01 |
 | 현재 링크 | /opt/deuce/current |
 | 비밀 설정 | /etc/deuce/deuce.env (root 전용 0600) |
 | PostgreSQL | 기존 17.10, DB deuce, 역할 deuce |
@@ -20,7 +20,13 @@
 
 ## 현재 검증과 남은 작업
 
-- 최신 `20260908-03`: 개인 AI 초대·PC 실행기와 채팅 UI, 0.2.0 앱 배포. migration 4→8 기존 데이터 보존, VM 서버 94개와 실제 Mac 업데이트·AI 답변/복구 통과. [배포 결과](2026-09-08-ai-invite-release.md).
+- 최신 `20260911-01` / 데스크톱 `0.2.3`: 멘션 이름 표시·키보드 선택을 웹·Mac arm64/x64·Windows x64와 두 업데이트 피드에 배포. VM 격리 DB 서버 94개 포함 총 279개 테스트·타입 검사·빌드와 Chromium 검증 통과. [배포 결과](2026-09-11-mention-release.md).
+
+- 이전 `20260910-02` / 데스크톱 `0.2.2`: Microsoft Fluent Emoji 3D 메시지 반응 40종을 웹·Mac arm64/x64·Windows x64와 두 업데이트 피드에 함께 배포. 백엔드·DB 변경 없이 VM 격리 DB 서버 94개·웹 159개·데스크톱 15개와 전체 타입 검사·빌드, 공개 웹 자산·설치 파일 해시 및 Mac 서명·공증 검증 통과. [배포 결과](2026-09-10-fluent-emoji.md).
+
+- 이전 `20260910-01`: Mac Dock·Windows 작업 표시줄 안 읽은 글 배지 웹·0.2.1 앱 배포. 백엔드·DB 변경 없이 VM 격리 DB 서버 94개, 전체 276개 테스트와 Mac 두 아키텍처 서명/공증·패키지/공개 다운로드 검증 통과. [배포 결과](2026-09-10-dock-badge.md).
+
+- 이전 `20260908-03`: 개인 AI 초대·PC 실행기와 채팅 UI, 0.2.0 앱 배포. migration 4→8 기존 데이터 보존, VM 서버 94개와 실제 Mac 업데이트·AI 답변/복구 통과. [배포 결과](2026-09-08-ai-invite-release.md).
 
 - 이전 `20260908-02`: 공식 Desktop OAuth·Google sub 계정 연결·앱 다운로드 반영.
   로컬/VM 서버 각 81개·실제 Mac 로그인·0.1.1 서명/공증/배포 완료.

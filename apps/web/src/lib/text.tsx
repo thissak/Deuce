@@ -21,7 +21,7 @@ function renderMentions(text: string, memberNames: string[], keyBase: string): R
     if (at > 0) out.push(rest.slice(0, at))
     out.push(
       <span key={`${keyBase}-m${i++}`} className="mention">
-        @{hit}
+        {hit}
       </span>,
     )
     rest = rest.slice(at + 1 + hit.length)

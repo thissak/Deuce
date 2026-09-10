@@ -19,7 +19,7 @@ describe('renderBody', () => {
 
   it('멘션을 하이라이트한다 (긴 이름 우선)', () => {
     const out = html('@김철수님 확인 부탁드립니다', ['김철수', '김철'])
-    expect(out).toContain('<span class="mention">@김철수</span>')
+    expect(out).toContain('<span class="mention">김철수</span>')
   })
 
   it('멤버가 아닌 @텍스트는 그대로 둔다', () => {

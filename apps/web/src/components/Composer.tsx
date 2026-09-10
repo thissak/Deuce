@@ -1,6 +1,6 @@
 import { MessageDtoSchema, type MessageDto, type UserDto } from '@deuce/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { ApiError, apiJson } from '../api/http'
 import { messagesKey, sharedKey } from '../api/queries'
 import { formatBytes, isImage } from '../lib/format'
@@ -31,6 +31,9 @@ export function Composer({
   const boxRef = useRef<HTMLTextAreaElement>(null)
   const caretFixRef = useRef<number | null>(null)
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
+  const [activeMention, setActiveMention] = useState(0)
+  const mentionListId = useId()
+  const mentionListRef = useRef<HTMLDivElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -41,9 +44,17 @@ export function Composer({
     ? members.filter((u) => u.id !== me.id && u.name.toLowerCase().startsWith(mention.query.toLowerCase()))
     : []
 
+  const selectedMention = Math.min(activeMention, Math.max(0, candidates.length - 1))
+  const selectedMentionId = candidates[selectedMention]?.id
+  useEffect(() => {
+    mentionListRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' })
+  }, [selectedMentionId])
+
   const refreshMention = () => {
     const el = boxRef.current
-    setMention(el ? mentionQueryAt(el.value, el.selectionStart) : null)
+    const next = el ? mentionQueryAt(el.value, el.selectionStart) : null
+    if (next?.start !== mention?.start || next?.query !== mention?.query) setActiveMention(0)
+    setMention(next)
   }
 
   const pickMention = (name: string) => {
@@ -193,10 +204,28 @@ export function Composer({
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
+    if (candidates.length > 0) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveMention((selectedMention + (e.key === 'ArrowDown' ? 1 : -1) + candidates.length) % candidates.length)
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        setMention(null)
+        return
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        pickMention(candidates[selectedMention]!.name)
+        return
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (candidates.length > 0 && mention && mention.query.length > 0) pickMention(candidates[0]!.name)
-      else submit()
+      submit()
     }
   }
 
@@ -277,17 +306,30 @@ export function Composer({
               setText(e.target.value)
               refreshMention()
             }}
-            onKeyUp={refreshMention}
+            aria-label="메시지"
+            aria-autocomplete="list"
+            aria-controls={candidates.length > 0 ? mentionListId : undefined}
+            aria-activedescendant={selectedMentionId ? `${mentionListId}-${selectedMentionId}` : undefined}
+            onKeyUp={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) refreshMention()
+            }}
+            onBlur={() => setMention(null)}
             onClick={refreshMention}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
             rows={1}
           />
           {candidates.length > 0 && (
-            <div className="mention-pop">
-              {candidates.map((u) => (
+            <div className="mention-pop" id={mentionListId} ref={mentionListRef} role="listbox" aria-label="멘션 대상">
+              {candidates.map((u, index) => (
                 <button
                   key={u.id}
+                  id={`${mentionListId}-${u.id}`}
+                  role="option"
+                  aria-selected={index === selectedMention}
+                  className={index === selectedMention ? 'focused' : undefined}
+                  tabIndex={-1}
+                  onMouseEnter={() => setActiveMention(index)}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     pickMention(u.name)
