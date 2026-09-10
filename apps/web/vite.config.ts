@@ -11,7 +11,6 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:4000',
       '/auth': 'http://localhost:4000',
-      '/mcp': 'http://localhost:4000',
       '/socket.io': { target: 'http://localhost:4000', ws: true },
     },
   },

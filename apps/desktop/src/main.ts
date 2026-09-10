@@ -1,11 +1,10 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage, shell, dialog, session, ipcMain, safeStorage } from 'electron'
+import { app, BrowserWindow, Menu, Tray, nativeImage, shell, dialog, session, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { parseSetCookie } from 'cookie'
 import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { APP_ORIGIN, WEBSOCKET_ORIGIN, trustedUrl, externalUrl } from './security'
 import { desktopLogin } from './login'
-import { desktopAgents } from './agents'
 import { attachDesktopBadge } from './badge'
 
 app.setAppUserModelId('dev.goldenlabs.deuce')
@@ -54,19 +53,6 @@ else {
   app.on('activate', () => { if (win) focus() })
   void app.whenReady().then(async () => {
     const ses = session.fromPartition('persist:deuce')
-    const agents = desktopAgents({
-      directory: app.getPath('userData'), origin: APP_ORIGIN,
-      currentUser: async () => {
-        try { const r = await ses.fetch(`${APP_ORIGIN}/auth/me`); return r.ok ? (await r.json()).id : null } catch { return null }
-      },
-      encrypt: (value) => {
-        if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) throw new Error('encryption unavailable')
-        return safeStorage.encryptString(value).toString('base64')
-      },
-      decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
-    })
-    app.on('before-quit', agents.stopAll)
-    ses.webRequest.onBeforeRequest({ urls: [`${APP_ORIGIN}/auth/logout`] }, (_details, callback) => { agents.stopAll(); callback({}) })
     ses.setPermissionRequestHandler((contents, permission, callback, details) => callback(trustedUrl(contents.getURL()) && trustedUrl(details.requestingUrl) && ['notifications', 'clipboard-sanitized-write'].includes(permission)))
     ses.setPermissionCheckHandler((contents, permission, origin) => !!contents && trustedUrl(contents.getURL()) && trustedUrl(origin) && ['notifications', 'clipboard-sanitized-write'].includes(permission))
     ses.webRequest.onHeadersReceived({ urls: [`${APP_ORIGIN}/*`] }, (details, callback) => callback({ responseHeaders: { ...details.responseHeaders,
@@ -87,11 +73,6 @@ else {
       return { action: 'deny' }
     })
     ipcMain.on('deuce:focus', (event) => { if (event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame && trustedUrl(event.senderFrame.url)) focus() })
-    ipcMain.handle('deuce:connect-agent', (event, connection: unknown) => {
-      if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !trustedUrl(event.senderFrame.url)) return { ok: false }
-      return agents.connect(connection)
-    })
-    win.webContents.on('did-finish-load', () => { if (trustedUrl(win.webContents.getURL())) void agents.restore() })
     win.webContents.on('did-fail-load', (_event, code, _description, _url, mainFrame) => {
       if (!mainFrame || code === -3) return
       void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><html lang="ko"><meta charset="utf-8"><title>Deuce</title><body style="font-family:system-ui;padding:60px"><h1>듀스에 연결하지 못했습니다.</h1><p>인터넷 연결을 확인하고 다시 시도해 주세요.</p><a href="${APP_ORIGIN}/chat">다시 연결</a></body></html>`)}`)

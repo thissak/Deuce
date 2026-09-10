@@ -129,6 +129,8 @@ model Mention {
   @@index([mentionedUserId, createdAt])
 }
 
+// Retired AI data below is kept for migration history and audit only.
+// No application endpoint or runner reads these models after #18.
 enum AgentScope {
   SELECTED
   CHANNELS

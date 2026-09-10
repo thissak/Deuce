@@ -43,8 +43,6 @@ export function attachRealtime(
   const onConvoUpdated = (p: { conversationId: string }) => {
     void qc.invalidateQueries({ queryKey: conversationsKey })
     void qc.invalidateQueries({ queryKey: conversationKey(p.conversationId) })
-    void qc.invalidateQueries({ queryKey: ['agents', p.conversationId] })
-    void qc.invalidateQueries({ queryKey: ['my-agents'] })
   }
   const onRemoved = (p: { conversationId: string }) => {
     void qc.invalidateQueries({ queryKey: conversationsKey })

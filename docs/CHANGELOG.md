@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- [remove] #18 AI 초대·설정·요청 UI, 서버 AI API·MCP·실행기 소켓, 데스크톱 실행기와 전용 패키지 제거. 사람 멘션과 과거 AI 메시지 표시는 유지.
+- [migration] 기존 연결 키 회수·기본 AI 설정 해제·RUNNING 요청을 FEATURE_REMOVED로 종료. 메시지·권한·완료 기록과 테이블 보존. 적용 전 구서버 중지 필요.
+- [test] 전체 243개 테스트·타입 검사·빌드, 격리 PostgreSQL migration 8→9 검증 통과. AI 경로 404·실행기 연결 거부·이력 보존·사람 멘션 회귀 포함.
+- [docs] 현재 작업 세션 공유와 채널 전용 봇의 사용 흐름을 비교하는 재설계 초안 및 ADR 013 작성. 신규 AI 구현·운영 배포 전.
+
 ## 0.2.3 — 2026-09-11
 
 - [release] 웹 `20260911-01`과 Mac arm64/x64·Windows x64 `0.2.3`, 두 업데이트 피드를 함께 공개. 운영 백업·health 확인, Mac 서명·Apple 공증·Gatekeeper·DMG와 패키지 코드·피드 해시 검증 통과. 서버·운영 DB 변경 없음. 공개 HTTPS 파일 58개 전체 SHA-256·HTTP 점검 6개 통과. [배포 기록](handoff/2026-09-11-mention-release.md).

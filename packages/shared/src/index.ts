@@ -16,4 +16,3 @@ export {
   PresenceSnapshotSchema,
   type PresenceSnapshot,
 } from './events.js'
-export * from './agent.js'

@@ -1,13 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { Prisma, type AgentConnection } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
 import { requestTrace } from '../observability.js'
-import { agentConversationWhere, isAgentActive } from '../domain/agents.js'
-import type { AppConfig } from '../config.js'
 
 const PostSchema = z.object({
   body: z.string().min(1).max(4000),
@@ -27,7 +25,7 @@ async function memberMessage(messageId: string, userId: string) {
   return (await isMember(msg.conversationId, userId)) ? msg : null
 }
 
-export const messageRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (app, { config }) => {
+export const messageRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', app.authenticate)
 
   app.post('/conversations/:id/messages', async (req, reply) => {
@@ -48,43 +46,27 @@ export const messageRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (a
       if (!target || target.conversationId !== id)
         return reply.code(400).send({ error: 'invalid replyToId' })
     }
-    const targets: AgentConnection[] = []
     for (const uid of new Set(mentions)) {
-      const a = await prisma.agentConnection.findUnique({ where: { userId: uid }, include: { owner: true } })
-      if (a && !a.conversationId) {
-        if (!isAgentActive(a, config) || !await prisma.conversation.count({ where: { AND: [{ id }, agentConversationWhere(a)] } }))
-          return reply.code(400).send({ error: 'AI is not participating' })
-        targets.push(a)
-      } else if (!(await isMember(id, uid))) return reply.code(400).send({ error: 'mention must be a member' })
+      const member = await prisma.conversationMember.findFirst({ where: { conversationId: id, userId: uid, user: { isAgent: false } } })
+      if (!member) return reply.code(400).send({ error: 'mention must be a human member' })
     }
-    if (targets.length > 1) return reply.code(400).send({ error: 'mention one AI per request' })
-    const target = targets[0]
-    if (target && app.agentRuntime.status(target.id) !== 'READY') return reply.code(409).send({ error: 'AI is offline or busy' })
-    if (target) await app.agentRuntime.expire({ agentId: target.id })
-    let saved
+    let created
     try {
-      saved = await prisma.$transaction(async (tx) => {
-        const created = await tx.message.create({
-          data: {
-            id: parsed.data.clientMessageId,
-            conversationId: id,
-            authorId: me,
-            body,
-            replyToId: replyToId ?? null,
-            mentions: { create: [...new Set(mentions)].map((mentionedUserId) => ({ mentionedUserId })) },
-          },
-          include: messageInclude,
-        })
-        const run = target ? await tx.agentRun.create({ data: { id: created.id, agentId: target.id, conversationId: id,
-          requestedById: me, prompt: body, questionMessageId: created.id } }) : null
-        return { created, run }
+      created = await prisma.message.create({
+        data: {
+          id: parsed.data.clientMessageId,
+          conversationId: id,
+          authorId: me,
+          body,
+          replyToId: replyToId ?? null,
+          mentions: { create: [...new Set(mentions)].map((mentionedUserId) => ({ mentionedUserId })) },
+        },
+        include: messageInclude,
       })
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return reply.code(409).send({ error: 'request already in progress' })
       throw e
     }
-    const { created, run } = saved
-    if (run) app.agentRuntime.start(run)
     const dto = toMessageDto(created)
     const trace = requestTrace.getStore()
     if (trace) trace.messageId = created.id

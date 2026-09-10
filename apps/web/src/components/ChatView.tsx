@@ -5,7 +5,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/http'
 import { conversationDetailQuery, conversationKey, conversationsKey } from '../api/queries'
 import { truncate } from '../lib/format'
-import { AgentInvite, conversationAgentsQuery } from './AgentInvite'
 import { Composer } from './Composer'
 import { ErrorNotice } from './ErrorNotice'
 import { GroupSettings } from './GroupSettings'
@@ -18,7 +17,6 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const detail = useQuery(conversationDetailQuery(conversationId))
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
-  const agents = useQuery(conversationAgentsQuery(conversationId))
   const [showSettings, setShowSettings] = useState(false)
   const [params, setParams] = useSearchParams()
   const jumpToId = params.get('m')
@@ -56,11 +54,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   if (!detail.data) return <section className="chat-view" />
 
   const c = detail.data
-  const participating = (agents.data ?? []).filter(a => a.participating && a.userId)
-  const mentionMembers = [...c.members, ...participating.map(a => ({ id: a.userId!,
-    name: c.members.some(u => u.name === a.name) || participating.some(other => other.id !== a.id && other.name === a.name)
-      ? `${a.name}·AI-${a.id.slice(0, 8)}` : a.name,
-    email: '', avatarUrl: null, isAgent: true }))]
+  const mentionMembers = c.members.filter(u => !u.isAgent)
   const other = c.type === 'DM' ? c.members.find((u) => u.id !== me.id) : undefined
   return (
     <section className="chat-view">
@@ -89,7 +83,6 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
           )}
         </div>
       </header>
-      <AgentInvite conversationId={conversationId} />
       {mute.isError && <ErrorNotice message="음소거 설정에 실패했습니다. 다시 시도해 주세요." />}
       {c.pinnedMessage && tab === 'chat' && (
         <button className="pin-banner" onClick={() => setParams({ m: c.pinnedMessage!.id })}>
