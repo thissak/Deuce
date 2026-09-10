@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { APP_ORIGIN, WEBSOCKET_ORIGIN, trustedUrl, externalUrl } from './security'
 import { desktopLogin } from './login'
 import { desktopAgents } from './agents'
+import { attachDesktopBadge } from './badge'
 
 app.setAppUserModelId('dev.goldenlabs.deuce')
 let win: BrowserWindow; let tray: Tray; let quitting = false; let signingIn = false
@@ -73,6 +74,7 @@ else {
     win = new BrowserWindow({ width: 1220, height: 820, minWidth: 760, minHeight: 520, title: 'Deuce', show: false,
       icon: join(app.getAppPath(), 'build/icon.png'), webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, preload: join(__dirname, 'preload.cjs') } })
     win.once('ready-to-show', focus)
+    attachDesktopBadge(win)
     win.on('close', (event) => { if (!quitting) { event.preventDefault(); win.hide() } })
     win.webContents.on('will-navigate', navigate)
     win.webContents.on('will-redirect', navigate)
