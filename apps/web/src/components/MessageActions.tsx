@@ -61,7 +61,7 @@ export function MessageActions({
   }
 
   return (
-    <div className="msg-actions" ref={rootRef}>
+    <div className="msg-actions" ref={rootRef} role="toolbar" aria-label="메시지 작업">
       {QUICK_REACTIONS.map((option) => (
         <button key={option.emoji} aria-label={option.emoji} title={option.label} onClick={() => onToggleReaction(option.emoji)}>
           <FluentEmoji emoji={option.emoji} />

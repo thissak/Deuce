@@ -275,6 +275,14 @@ describe('MessageBubble 액션', () => {
     expect(bar?.querySelectorAll(':scope > button')).toHaveLength(7)
   })
 
+  it('액션 바는 본문 밖 말풍선 경계에 배치된다', () => {
+    renderBubble(msg({ body: '가리지 않아야 할 본문' }), jsonStub(msg({})), true)
+    const bar = document.querySelector('.msg-actions')
+    expect(bar?.parentElement?.classList.contains('msg-bubble-wrap')).toBe(true)
+    expect(bar?.nextElementSibling?.classList.contains('bubble')).toBe(true)
+    expect(bar?.closest('.bubble')).toBeNull()
+  })
+
   it('남의 메시지 액션 바는 수정 버튼 없이 6개 버튼을 담는다', () => {
     renderBubble(msg({}), jsonStub(msg({})), false)
     const bar = document.querySelector('.msg-actions')

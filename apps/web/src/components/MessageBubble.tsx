@@ -90,31 +90,7 @@ export function MessageBubble({
           {m.editedAt && !m.deleted && <span className="edited-mark">(수정됨)</span>}
           {m.pinnedAt && !m.deleted && <span className="pin-mark">📌 고정됨</span>}
         </div>
-        <div className={`bubble ${m.deleted ? 'deleted' : ''}`}>
-          {m.replyTo && (
-            <div className="quote">
-              <span className="quote-author">{m.replyTo.authorName}</span>
-              {m.replyTo.deleted ? '삭제된 메시지입니다' : m.replyTo.body}
-            </div>
-          )}
-          {m.deleted ? (
-            '삭제된 메시지입니다'
-          ) : editing ? (
-            <div>
-              <textarea value={draft} maxLength={4000} onChange={(e) => setDraft(e.target.value)} rows={2} />
-              {action.isError && <ErrorNotice message="수정에 실패했습니다. 다시 시도해 주세요." />}
-              <div className="dialog-actions">
-                <button className="btn-plain" onClick={() => setEditing(false)}>
-                  취소
-                </button>
-                <button className="btn-primary" onClick={saveEdit}>
-                  저장
-                </button>
-              </div>
-            </div>
-          ) : (
-            renderBody(m.body, memberNames)
-          )}
+        <div className="msg-bubble-wrap">
           {!m.deleted && !editing && (
             <MessageActions
               isMine={isMine}
@@ -131,7 +107,33 @@ export function MessageBubble({
               onDelete={() => action.mutate({ method: 'DELETE', path: `/api/messages/${m.id}` })}
             />
           )}
-          {actionFailed && !editing && <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />}
+          <div className={`bubble ${m.deleted ? 'deleted' : ''}`}>
+            {m.replyTo && (
+              <div className="quote">
+                <span className="quote-author">{m.replyTo.authorName}</span>
+                {m.replyTo.deleted ? '삭제된 메시지입니다' : m.replyTo.body}
+              </div>
+            )}
+            {m.deleted ? (
+              '삭제된 메시지입니다'
+            ) : editing ? (
+              <div>
+                <textarea value={draft} maxLength={4000} onChange={(e) => setDraft(e.target.value)} rows={2} />
+                {action.isError && <ErrorNotice message="수정에 실패했습니다. 다시 시도해 주세요." />}
+                <div className="dialog-actions">
+                  <button className="btn-plain" onClick={() => setEditing(false)}>
+                    취소
+                  </button>
+                  <button className="btn-primary" onClick={saveEdit}>
+                    저장
+                  </button>
+                </div>
+              </div>
+            ) : (
+              renderBody(m.body, memberNames)
+            )}
+            {actionFailed && !editing && <ErrorNotice message="요청에 실패했습니다. 다시 시도해 주세요." />}
+          </div>
         </div>
         {!m.deleted && m.attachments.length > 0 && (
           <div>

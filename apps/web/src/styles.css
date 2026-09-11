@@ -70,7 +70,9 @@ a { color: #5b5fc7; text-decoration: none; }
 .msg-meta { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #888; }
 .msg-row.mine .msg-meta { justify-content: flex-end; }
 .msg-author { font-weight: 600; color: #444; }
-.bubble { position: relative; margin-top: 2px; padding: 8px 12px; border-radius: 6px; background: #f5f5f5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-bubble-wrap { position: relative; display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
+.msg-row.mine .msg-bubble-wrap { align-items: flex-end; }
+.bubble { margin-top: 2px; padding: 8px 12px; border-radius: 6px; background: #f5f5f5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-row.mine .bubble { background: #e8ebfa; }
 .bubble.deleted { color: #999; font-style: italic; }
 .bubble .quote { border-left: 3px solid #5b5fc7; background: rgba(0,0,0,0.04); padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; color: #555; }
@@ -78,15 +80,16 @@ a { color: #5b5fc7; text-decoration: none; }
 .mention { color: #444791; font-weight: 600; }
 .edited-mark, .pin-mark { font-size: 11px; color: #888; margin-left: 6px; }
 .msg-row.highlight .bubble { outline: 2px solid #eaa300; transition: outline 0.3s; }
-.msg-actions { position: absolute; top: -14px; right: 4px; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
-.msg-row:hover .msg-actions { display: flex; }
+.msg-actions { position: absolute; bottom: calc(100% - 9px); left: 0; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
+.msg-row.mine .msg-actions { right: 0; left: auto; }
+.msg-row:hover .msg-actions, .msg-row:focus-within .msg-actions { display: flex; }
 /* 팝오버가 액션 바의 자식이라, 열려 있는 동안은 hover가 풀려도 바가 남아야 한다 */
 .msg-actions:has(.reaction-palette), .msg-actions:has(.msg-menu) { display: flex; z-index: 2; } /* 아래 메시지의 액션 바(z-index 1)에 가려지지 않게 */
 .msg-actions button { border: none; background: none; padding: 3px 6px; font-size: 12px; }
 .fluent-emoji { display: inline-block; width: 20px; height: 20px; object-fit: contain; vertical-align: middle; user-select: none; }
 .msg-actions button:hover { background: #f0f0f0; }
 .msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
-.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
+.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; right: 0; bottom: 100%; margin-bottom: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
 .reaction-palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 8px; width: min(320px, calc(100vw - 32px)); }
 .reaction-palette button { display: grid; place-items: center; min-width: 0; height: 36px; padding: 4px; border-radius: 4px; }
 .reaction-palette .fluent-emoji { width: 28px; height: 28px; }
