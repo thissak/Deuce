@@ -9,7 +9,7 @@
 | 앱 / 터널 | deuce.service / cloudflared-deuce.service |
 | 내부 포트 | 127.0.0.1:4010 |
 | 런타임 | /opt/deuce/node (Node 24.20.0), pnpm 11.24.0 |
-| 릴리스 | /opt/deuce/releases/20260911-01 |
+| 릴리스 | /opt/deuce/releases/20260911-02 |
 | 현재 링크 | /opt/deuce/current |
 | 비밀 설정 | /etc/deuce/deuce.env (root 전용 0600) |
 | PostgreSQL | 기존 17.10, DB deuce, 역할 deuce |
@@ -20,7 +20,9 @@
 
 ## 현재 검증과 남은 작업
 
-- 최신 `20260911-01` / 데스크톱 `0.2.3`: 멘션 이름 표시·키보드 선택을 웹·Mac arm64/x64·Windows x64와 두 업데이트 피드에 배포. VM 격리 DB 서버 94개 포함 총 279개 테스트·타입 검사·빌드와 Chromium 검증 통과. [배포 결과](2026-09-11-mention-release.md).
+- 최신 `20260911-02` / 데스크톱 `0.2.4`: AI 제어 UI·API·MCP·PC 실행기를 제거하고 메시지 액션 바를 말풍선 위에 배치. 운영 백업과 복제 DB 검증 뒤 migration을 적용해 메시지 95개와 연결 기록 7개를 보존하고 활성 연결·기본 AI만 해제했다. 총 244개 테스트, Mac 두 아키텍처 서명·공증, 공개 파일 58개 전체 해시와 설치 Mac 업데이트를 확인. [배포 결과](2026-09-11-ai-retirement-release.md).
+
+- 이전 `20260911-01` / 데스크톱 `0.2.3`: 멘션 이름 표시·키보드 선택을 웹·Mac arm64/x64·Windows x64와 두 업데이트 피드에 배포. VM 격리 DB 서버 94개 포함 총 279개 테스트·타입 검사·빌드와 Chromium 검증 통과. [배포 결과](2026-09-11-mention-release.md).
 
 - 이전 `20260910-02` / 데스크톱 `0.2.2`: Microsoft Fluent Emoji 3D 메시지 반응 40종을 웹·Mac arm64/x64·Windows x64와 두 업데이트 피드에 함께 배포. 백엔드·DB 변경 없이 VM 격리 DB 서버 94개·웹 159개·데스크톱 15개와 전체 타입 검사·빌드, 공개 웹 자산·설치 파일 해시 및 Mac 서명·공증 검증 통과. [배포 결과](2026-09-10-fluent-emoji.md).
 

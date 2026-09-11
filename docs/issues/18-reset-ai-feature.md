@@ -1,9 +1,9 @@
 # #18 앱 AI 기능 제거 후 참여 모델 재설계
 
 **Issue**: https://github.com/thissak/Deuce/issues/18
-**Status**: In Progress
+**Status**: Resolved
 **Created**: 2026-09-11
-**Resolved**: -
+**Resolved**: 2026-09-11
 
 ---
 
@@ -103,23 +103,25 @@
 
 ### PR
 
--
+- 구현 기준 커밋: `7a9ea6f5ad8e9a6eec6db5e39a7a2a5928f4f4ac`
 
 ---
 
 ## 5. 검증 결과
 
-### 로컬 검증 완료
+### 로컬·운영 검증 완료
 
-- `pnpm test`: 243개 통과 (웹 154·서버 79·데스크톱 10). 제거된 기능 테스트는 삭제하고 철회 계약 회귀 테스트 추가.
-- `pnpm typecheck`, `pnpm build`: 통과. 설치 파일 패키징·서명 검증은 아직 수행하지 않음.
+- `pnpm test`: 244개 통과 (웹 155·서버 79·데스크톱 10). 제거된 기능 테스트는 삭제하고 철회 계약·액션 바 회귀 테스트 추가.
+- `pnpm typecheck`, `pnpm build`: 통과.
 - `db:migrate:test`: 임시 PostgreSQL에서 기존 8개에 새 migration 적용, 총 9개 성공.
 - `ai-retirement-routes`: 구 API/MCP 404, 실제 Socket.IO 구 실행기 접속은 Invalid namespace, health 정상.
 - `ai-retirement-data`: 과거 답변·인용·시스템 메시지·권한·완료 기록 보존, 키 회수와 진행 중 종료, 반복 적용 안정성, 사람 멘션·활동 생성 및 AI 멘션 거부 검증.
 - 웹 회귀: AI 진입점·후보·조회 제거 및 과거 AI 답변 표시. 데스크톱 preload는 focus/setUnreadCount만 노출.
-- 운영 DB·설치 앱은 변경하지 않음. [업그레이드 순서와 복구 한계](../self-hosting.md#ai-기능-제거-버전으로-업그레이드-18)를 기록.
+- 운영 복제 DB에 migration을 먼저 검증한 뒤 백업·구 서버 정지·운영 migration·새 서버 기동 순으로 적용. 연결 7개와 메시지 95개는 유지되고 활성 연결 7개와 기본 AI 1개는 0개가 됨.
+- 웹 `20260911-02`와 데스크톱 `0.2.4` 배포. 공개 파일 58개 전체 해시, HTTP 8개, Mac 두 아키텍처 서명·공증·staple·Gatekeeper·DMG를 확인.
+- 설치 Mac에서 0.2.3→0.2.4 업데이트·재실행 후 AI 제어가 없는 화면과 메시지 액션 바 비겹침을 확인. 처음 보인 구 AI 제어는 실행 중인 0.2.3 렌더러가 보관한 화면이었고 실제 메뉴 새로고침으로 제거됨.
+- 세부 영수증과 복구 경계는 [0.2.4 배포 기록](../handoff/2026-09-11-ai-retirement-release.md)과 [업그레이드 절차](../self-hosting.md#ai-기능-제거-버전으로-업그레이드-18)에 기록.
 
 ### 잔여 이슈
 
-- 제거 후 새 AI 참여 모델 설계와 사용자 검토
-- 배포·구버전 앱 교체·운영 데이터 보존 확인과 실제 사용자 smoke 검증. 이슈는 후속 검증까지 열어 둔다.
+- 현재 Codex 세션을 채널에 붙이는 별도 PoC. [현재 세션 연결 계획](../design/2026-09-11-ai-restart-plan.md)을 따른다.
