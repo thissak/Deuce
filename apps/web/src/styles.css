@@ -29,13 +29,17 @@ a { color: #5b5fc7; text-decoration: none; }
 .list-panel { width: 320px; flex: none; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
 .list-header { padding: 12px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #eee; }
 .list-header h2 { margin: 0; font-size: 18px; flex: 1; }
-.chips { display: flex; gap: 6px; padding: 8px 12px; }
+.chips { display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
 .chip { border: 1px solid #d1d1d1; background: #fff; border-radius: 16px; padding: 4px 12px; }
 .chip.active { background: #e8ebfa; border-color: #5b5fc7; color: #444791; }
 .convo-list { flex: 1; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
-.convo-item { width: 100%; text-align: left; display: flex; gap: 10px; padding: 10px 12px; border: none; background: none; align-items: center; }
+.convo-row { position: relative; }
+.convo-item { width: 100%; text-align: left; display: flex; gap: 10px; padding: 10px 42px 10px 12px; border: none; background: none; align-items: center; }
 .convo-item:hover { background: #f5f5f5; }
 .convo-item.active { background: #e8ebfa; }
+.convo-more { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 30px; height: 30px; border: none; border-radius: 4px; background: transparent; color: #666; font-size: 18px; line-height: 1; opacity: 0; }
+.convo-row:hover .convo-more, .convo-row:focus-within .convo-more, .convo-more[aria-expanded="true"] { opacity: 1; }
+.convo-more:hover { background: #e5e5e5; color: #242424; }
 .convo-body { flex: 1; min-width: 0; }
 .convo-title { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
 .convo-time { font-weight: 400; color: #888; font-size: 12px; flex: none; }
@@ -43,6 +47,14 @@ a { color: #5b5fc7; text-decoration: none; }
 .convo-item.unread .convo-title, .convo-item.unread .convo-preview { font-weight: 700; color: #242424; }
 .badge { flex: none; min-width: 18px; height: 18px; border-radius: 9px; background: #c4314b; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
 .muted-mark { color: #888; font-size: 12px; }
+.convo-empty { padding: 24px 16px; color: #777; text-align: center; }
+.convo-context-menu { position: fixed; z-index: 30; min-width: 180px; padding: 5px; border: 1px solid #d1d1d1; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.18); display: flex; flex-direction: column; }
+.convo-context-menu button { border: none; border-radius: 5px; background: transparent; padding: 9px 12px; text-align: left; white-space: nowrap; }
+.convo-context-menu button:hover, .convo-context-menu button:focus-visible { background: #f0f0f0; outline: none; }
+.convo-context-menu button.danger { color: #c4314b; }
+.convo-context-menu button.danger:hover, .convo-context-menu button.danger:focus-visible { background: #fcf0f2; }
+.convo-leave-dialog { width: 360px; }
+.convo-leave-dialog p { margin: 0; color: #555; }
 
 /* 대화 패널 */
 .chat-view { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #fff; }
@@ -185,4 +197,5 @@ a { color: #5b5fc7; text-decoration: none; }
   .mobile-chat-back { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 44px; font-size: 30px; }
   .dialog { max-width: calc(100vw - 24px); max-height: 85dvh; overflow-y: auto; }
   .dialog input, .dialog textarea, .composer textarea { font-size: 16px; }
+  .convo-more { opacity: 1; }
 }

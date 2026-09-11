@@ -16,6 +16,16 @@ describe('conversations', () => {
     expect(filterConversations(list, 'all')).toHaveLength(2)
   })
 
+  it('대화와 채널을 종류별로 분리한다', () => {
+    const list = [
+      convo({ id: 'dm', type: 'DM' }),
+      convo({ id: 'group', type: 'GROUP' }),
+      convo({ id: 'channel', type: 'CHANNEL' }),
+    ]
+    expect(filterConversations(list, 'chats').map((c) => c.id)).toEqual(['dm', 'group'])
+    expect(filterConversations(list, 'channels').map((c) => c.id)).toEqual(['channel'])
+  })
+
   it('미리보기는 "작성자: 본문", 없으면 "메시지 없음"', () => {
     expect(previewText(convo({}))).toBe('메시지 없음')
     expect(previewText(convo({
