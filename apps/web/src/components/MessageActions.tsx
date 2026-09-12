@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { QUICK_REACTIONS, REACTION_PALETTE } from '../lib/messages'
 import { useEscapeKey } from '../lib/useEscapeKey'
 import { FluentEmoji } from './FluentEmoji'
@@ -24,7 +24,9 @@ export function MessageActions({
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [openBelow, setOpenBelow] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
 
   const closeAll = () => {
     setPaletteOpen(false)
@@ -44,6 +46,20 @@ export function MessageActions({
     return () => document.removeEventListener('mousedown', onDown)
   }, [paletteOpen, menuOpen])
 
+  // 타임라인 스크롤 영역 위쪽은 스크롤로 닿을 수 없어 잘린다 — 위 공간이 팝오버보다 좁으면 아래로 연다
+  useLayoutEffect(() => {
+    if (!paletteOpen && !menuOpen) {
+      setOpenBelow(false)
+      return
+    }
+    const bar = rootRef.current
+    const popover = popoverRef.current
+    if (!bar || !popover) return
+    const boundaryTop = bar.closest('.timeline')?.getBoundingClientRect().top ?? 0
+    const spaceAbove = bar.getBoundingClientRect().top - boundaryTop
+    setOpenBelow(spaceAbove < popover.offsetHeight + 4)
+  }, [paletteOpen, menuOpen])
+
   const togglePalette = () => {
     setMenuOpen(false)
     setPaletteOpen((v) => !v)
@@ -61,7 +77,7 @@ export function MessageActions({
   }
 
   return (
-    <div className="msg-actions" ref={rootRef} role="toolbar" aria-label="메시지 작업">
+    <div className={openBelow ? 'msg-actions open-below' : 'msg-actions'} ref={rootRef} role="toolbar" aria-label="메시지 작업">
       {QUICK_REACTIONS.map((option) => (
         <button key={option.emoji} aria-label={option.emoji} title={option.label} onClick={() => onToggleReaction(option.emoji)}>
           <FluentEmoji emoji={option.emoji} />
@@ -80,7 +96,7 @@ export function MessageActions({
         ⋯
       </button>
       {paletteOpen && (
-        <div className="reaction-palette">
+        <div className="reaction-palette" ref={popoverRef}>
           {REACTION_PALETTE.map((option) => (
             <button
               key={option.emoji}
@@ -94,7 +110,7 @@ export function MessageActions({
         </div>
       )}
       {menuOpen && (
-        <div className="msg-menu" role="menu">
+        <div className="msg-menu" role="menu" ref={popoverRef}>
           {confirmDelete ? (
             <>
               <button

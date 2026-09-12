@@ -102,6 +102,7 @@ a { color: #5b5fc7; text-decoration: none; }
 .msg-actions button:hover { background: #f0f0f0; }
 .msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
 .msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; right: 0; bottom: 100%; margin-bottom: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
+.msg-actions.open-below .reaction-palette, .msg-actions.open-below .msg-menu { bottom: auto; top: 100%; margin-bottom: 0; margin-top: 4px; }
 .reaction-palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 8px; width: min(320px, calc(100vw - 32px)); }
 .reaction-palette button { display: grid; place-items: center; min-width: 0; height: 36px; padding: 4px; border-radius: 4px; }
 .reaction-palette .fluent-emoji { width: 28px; height: 28px; }
