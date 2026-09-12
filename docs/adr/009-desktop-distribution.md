@@ -66,6 +66,12 @@ Chromium 하네스는 실제 앱 login 함수→브라우저 GET 콜백→서버
 최초 패키징 Mac 로그인은 한 차례 실패했고 재시도에서 성공했으며 당시 실패 원인은 미확정이다.
 Windows 실기·버전 간 업데이트는 미검증이다. 상세 결과는 데스크톱 이관 문서와 receipt를 따른다.
 
+## 릴리스 단위 (2026-09-11)
+
+운영 배포는 웹과 Windows x64·Mac arm64/x64 설치 파일, 두 업데이트 피드를 항상 같은 릴리스로 묶는다.
+웹만 바뀌어 Electron 코드가 같더라도 데스크톱 버전을 올리고 설치 파일과 피드를 함께 공개한다.
+각 플랫폼 산출물과 공개 다운로드를 모두 검증하기 전에는 운영 배포 완료로 기록하지 않는다.
+
 - https://developers.google.com/identity/protocols/oauth2/native-app
 - https://github.com/googleapis/google-cloud-node/blob/main/core/packages/google-auth-library-nodejs/samples/oauth2-codeVerifier.js
 - https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration

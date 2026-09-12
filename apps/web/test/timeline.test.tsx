@@ -36,11 +36,26 @@ function renderTimeline(fn: ReturnType<typeof fetchStub>) {
 }
 
 afterEach(() => {
+  delete window.deuceDesktop
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
 describe('Timeline', () => {
+  it('데스크톱 창이 뒤에 있으면 새 글을 읽지 않고 포커스 복귀 때 처리한다', async () => {
+    window.deuceDesktop = { focus: vi.fn(), setUnreadCount: vi.fn() }
+    const focused = vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    const fn = fetchStub()
+    renderTimeline(fn)
+    await screen.findByText('먼저')
+    expect(readCall(fn)).toBeUndefined()
+    focused.mockReturnValue(true)
+    fireEvent.focus(window)
+    await waitFor(() => expect(readCall(fn)).toBeTruthy())
+    fireEvent.focus(window)
+    expect(fn.mock.calls.filter((c) => c[1]?.method === 'PUT')).toHaveLength(1)
+  })
+
   it('"이전 메시지 보기"는 과거 페이지가 그려진 뒤 늘어난 높이만큼 scrollTop을 보정한다', async () => {
     // 실 Chrome에서 관측한 순서 — react-query 알림(setTimeout 배치)보다 rAF가 먼저 돌아 커밋 전에 보정이 실행됐다
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {

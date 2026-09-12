@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { activityQuery } from '../api/queries'
 import { formatTime, truncate } from '../lib/format'
 import { ErrorNotice } from './ErrorNotice'
+import { FluentEmoji } from './FluentEmoji'
 
 export function ActivityPage() {
   const navigate = useNavigate()
@@ -23,9 +24,17 @@ export function ActivityPage() {
             >
               <span className="result-meta">
                 <span>
-                  {it.kind === 'mention'
-                    ? `${it.actor.name}님이 회원님을 멘션했습니다`
-                    : `${it.actor.name}님이 ${it.emoji ?? ''} 반응을 남겼습니다`}
+                  {it.kind === 'mention' ? (
+                    `${it.actor.name}님이 회원님을 멘션했습니다`
+                  ) : (
+                    <>
+                      {it.actor.name}님이{' '}
+                      <span className="activity-reaction" aria-label={it.emoji ?? ''}>
+                        <FluentEmoji emoji={it.emoji ?? ''} />
+                      </span>{' '}
+                      반응을 남겼습니다
+                    </>
+                  )}
                 </span>
                 <span>{formatTime(it.createdAt)}</span>
               </span>

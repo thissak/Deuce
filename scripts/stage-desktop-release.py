@@ -21,7 +21,7 @@ for name in expected:
 <title>듀스 앱 다운로드</title>
 <style>body{{font:16px/1.7 system-ui,sans-serif;background:#f6f5fa;color:#222;margin:0}}main{{max-width:850px;margin:60px auto;padding:24px}}h1{{font-size:42px;letter-spacing:-1px}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}}article{{background:white;border:1px solid #dedbea;border-radius:16px;padding:24px}}a{{color:#5149ad}}.button{{display:block;background:#5b50bc;color:white;text-align:center;padding:12px;border-radius:8px;text-decoration:none}}small{{color:#666}}footer{{margin-top:32px}}code{{overflow-wrap:anywhere}}</style>
 <main><small>DEUCE · 데스크톱 {version}</small><h1>대화를 앱에서 이어가세요.</h1>
-<p>채널에서 사람과 AI가 함께 대화하고 자료를 공유하세요. 기존 듀스 계정으로 로그인합니다.</p>
+<p>채널에서 대화하고 자료를 공유하세요. 기존 듀스 계정으로 로그인합니다.</p>
 <section class="cards">
 <article><h2>Mac</h2><p>Apple Silicon<br><small>M 시리즈 칩</small></p><a class="button" href="Deuce-{version}-mac-arm64.dmg">Mac 앱 다운로드</a><p><small>Developer ID 서명 · Apple 공증 완료</small></p></article>
 <article><h2>Mac</h2><p>Intel<br><small>Intel 프로세서</small></p><a class="button" href="Deuce-{version}-mac-x64.dmg">Intel Mac 다운로드</a><p><small>Developer ID 서명 · Apple 공증 완료</small></p></article>

@@ -5,11 +5,9 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from '../api/http'
 import { ActivityPage } from './ActivityPage'
 import { ChatPage } from './ChatPage'
-import { MyAgentsSettings } from './MyAgentsSettings'
 import { setDiagnostics } from '../diagnostics/recorder'
 
 export function Shell({ me }: { me: UserDto }) {
-  const [showAgents, setShowAgents] = useState(false)
   const [notifyAsked, setNotifyAsked] = useState(
     typeof Notification === 'undefined' || Notification.permission !== 'default',
   )
@@ -24,7 +22,6 @@ export function Shell({ me }: { me: UserDto }) {
         <NavLink to="/activity" className="appbar-item">활동</NavLink>
         <NavLink to="/chat" className="appbar-item">채팅</NavLink>
         <div className="appbar-spacer" />
-        <button className="appbar-item" onClick={() => setShowAgents(true)}>설정</button>
         <a className="appbar-item" href="/download" target="_blank" rel="noreferrer">앱 설치</a>
         <button className="appbar-item" onClick={() => setDiagnostics(true)}>진단</button>
         <div className="appbar-me" title={me.email}>
@@ -59,7 +56,6 @@ export function Shell({ me }: { me: UserDto }) {
           </Routes>
         </div>
       </main>
-      {showAgents && <MyAgentsSettings onClose={() => setShowAgents(false)} />}
     </div>
   )
 }

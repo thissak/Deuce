@@ -12,17 +12,11 @@ export function mentionQueryAt(text: string, caret: number): { start: number; qu
 
 export function collectMentionIds(text: string, members: UserDto[]): string[] {
   // 긴 이름 우선 — "@김철수"가 "김철"로도 매칭되지 않게 (renderMentions와 같은 규칙)
-  const sorted = [...members].sort((a, b) => b.name.length - a.name.length)
+  const sorted = members.filter(u => !u.isAgent).sort((a, b) => b.name.length - a.name.length)
   const ids = new Set<string>()
   let at = text.indexOf('@')
   while (at !== -1) {
-    const hit = sorted.find((u) => {
-      if (!text.startsWith(`@${u.name}`, at)) return false
-      if (!u.isAgent) return true
-      // AI mentions execute a model: an email address or a longer word is not a request.
-      const end = at + u.name.length + 1
-      return (at === 0 || /\s/.test(text[at - 1]!)) && (end === text.length || /[\s.,!?:;。！？]/u.test(text[end]!))
-    })
+    const hit = sorted.find((u) => text.startsWith(`@${u.name}`, at))
     if (hit) ids.add(hit.id)
     at = text.indexOf('@', at + 1 + (hit ? hit.name.length : 0))
   }

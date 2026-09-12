@@ -55,7 +55,7 @@ export async function summarizeConversation(conversationId: string, meId: string
     type: convo.type,
     title: convo.title,
     displayName,
-    members: convo.members.map((m) => toUserDto(m.user)),
+    members: convo.members.filter((m) => !m.user.isAgent).map((m) => toUserDto(m.user)),
     lastMessage: last
       ? { id: last.id, body: last.body, authorName: last.author.name, createdAt: last.createdAt.toISOString() }
       : null,

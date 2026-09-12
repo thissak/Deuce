@@ -7,13 +7,14 @@ import { useJumpToMessage } from '../lib/useJumpToMessage'
 import { ErrorNotice } from './ErrorNotice'
 import { MessageBubble } from './MessageBubble'
 
-/** 최신 메시지가 보이는 상태(탭 표시 중)일 때만 읽음 커서를 전진시킨다. 서버가 후퇴를 막아주므로 낙관 전송. */
+/** 탭 표시 중이고 데스크톱 창에 포커스가 있을 때 읽음 커서를 전진시킨다. 서버가 후퇴를 막아준다. */
 function useAdvanceRead(conversationId: string, newestMessageId: string | undefined): void {
   const qc = useQueryClient()
   const sentRef = useRef<string | null>(null)
   useEffect(() => {
     const send = () => {
       if (!newestMessageId || document.hidden || sentRef.current === newestMessageId) return
+      if (window.deuceDesktop && !document.hasFocus()) return
       sentRef.current = newestMessageId
       apiJson('PUT', `/api/conversations/${conversationId}/read`, { messageId: newestMessageId })
         .then(() => qc.invalidateQueries({ queryKey: conversationsKey }))
@@ -23,7 +24,11 @@ function useAdvanceRead(conversationId: string, newestMessageId: string | undefi
     }
     send()
     document.addEventListener('visibilitychange', send)
-    return () => document.removeEventListener('visibilitychange', send)
+    window.addEventListener('focus', send)
+    return () => {
+      document.removeEventListener('visibilitychange', send)
+      window.removeEventListener('focus', send)
+    }
   }, [conversationId, newestMessageId, qc])
 }
 

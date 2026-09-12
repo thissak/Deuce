@@ -29,13 +29,17 @@ a { color: #5b5fc7; text-decoration: none; }
 .list-panel { width: 320px; flex: none; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
 .list-header { padding: 12px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #eee; }
 .list-header h2 { margin: 0; font-size: 18px; flex: 1; }
-.chips { display: flex; gap: 6px; padding: 8px 12px; }
+.chips { display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
 .chip { border: 1px solid #d1d1d1; background: #fff; border-radius: 16px; padding: 4px 12px; }
 .chip.active { background: #e8ebfa; border-color: #5b5fc7; color: #444791; }
 .convo-list { flex: 1; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
-.convo-item { width: 100%; text-align: left; display: flex; gap: 10px; padding: 10px 12px; border: none; background: none; align-items: center; }
+.convo-row { position: relative; }
+.convo-item { width: 100%; text-align: left; display: flex; gap: 10px; padding: 10px 42px 10px 12px; border: none; background: none; align-items: center; }
 .convo-item:hover { background: #f5f5f5; }
 .convo-item.active { background: #e8ebfa; }
+.convo-more { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 30px; height: 30px; border: none; border-radius: 4px; background: transparent; color: #666; font-size: 18px; line-height: 1; opacity: 0; }
+.convo-row:hover .convo-more, .convo-row:focus-within .convo-more, .convo-more[aria-expanded="true"] { opacity: 1; }
+.convo-more:hover { background: #e5e5e5; color: #242424; }
 .convo-body { flex: 1; min-width: 0; }
 .convo-title { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
 .convo-time { font-weight: 400; color: #888; font-size: 12px; flex: none; }
@@ -43,6 +47,14 @@ a { color: #5b5fc7; text-decoration: none; }
 .convo-item.unread .convo-title, .convo-item.unread .convo-preview { font-weight: 700; color: #242424; }
 .badge { flex: none; min-width: 18px; height: 18px; border-radius: 9px; background: #c4314b; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
 .muted-mark { color: #888; font-size: 12px; }
+.convo-empty { padding: 24px 16px; color: #777; text-align: center; }
+.convo-context-menu { position: fixed; z-index: 30; min-width: 180px; padding: 5px; border: 1px solid #d1d1d1; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.18); display: flex; flex-direction: column; }
+.convo-context-menu button { border: none; border-radius: 5px; background: transparent; padding: 9px 12px; text-align: left; white-space: nowrap; }
+.convo-context-menu button:hover, .convo-context-menu button:focus-visible { background: #f0f0f0; outline: none; }
+.convo-context-menu button.danger { color: #c4314b; }
+.convo-context-menu button.danger:hover, .convo-context-menu button.danger:focus-visible { background: #fcf0f2; }
+.convo-leave-dialog { width: 360px; }
+.convo-leave-dialog p { margin: 0; color: #555; }
 
 /* 대화 패널 */
 .chat-view { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #fff; }
@@ -57,16 +69,7 @@ a { color: #5b5fc7; text-decoration: none; }
 .pin-banner { display: block; width: 100%; text-align: left; border: none; border-bottom: 1px solid #eee; background: #fffbe6; padding: 8px 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-error, .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #666; }
 
-/* 대화 중 AI 초대와 실행 상태 */
-.agent-invite-controls { padding: 10px 16px; border-bottom: 1px solid #e8e5f1; background: #faf9fe; flex: none; }
-.agent-invite-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.agent-invite-controls small, .agent-participants { display: block; margin: 6px 0 0; font-size: 12px; color: #74668a; overflow-wrap: anywhere; }
 .agent-system-message { margin: 12px 0; padding: 8px 12px; color: #79658f; background: #f7f4fc; border-radius: 8px; font-size: 12px; text-align: center; overflow-wrap: anywhere; }
-.agent-request-dialog label { display: grid; gap: 6px; margin-bottom: 12px; }
-.agent-request-dialog textarea, .agent-request-dialog select { width: 100%; font: inherit; padding: 8px; border: 1px solid #d8d0e8; border-radius: 6px; }
-.agent-request-dialog p { font-size: 13px; }
-.agent-runner-command { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin: 12px 0; }
-.agent-connection-setup select { font: inherit; margin: 0 8px; padding: 6px; }
 .mobile-chat-back { display: none; }
 
 
@@ -79,7 +82,9 @@ a { color: #5b5fc7; text-decoration: none; }
 .msg-meta { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #888; }
 .msg-row.mine .msg-meta { justify-content: flex-end; }
 .msg-author { font-weight: 600; color: #444; }
-.bubble { position: relative; margin-top: 2px; padding: 8px 12px; border-radius: 6px; background: #f5f5f5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-bubble-wrap { position: relative; display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
+.msg-row.mine .msg-bubble-wrap { align-items: flex-end; }
+.bubble { margin-top: 2px; padding: 8px 12px; border-radius: 6px; background: #f5f5f5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-row.mine .bubble { background: #e8ebfa; }
 .bubble.deleted { color: #999; font-style: italic; }
 .bubble .quote { border-left: 3px solid #5b5fc7; background: rgba(0,0,0,0.04); padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; color: #555; }
@@ -87,23 +92,29 @@ a { color: #5b5fc7; text-decoration: none; }
 .mention { color: #444791; font-weight: 600; }
 .edited-mark, .pin-mark { font-size: 11px; color: #888; margin-left: 6px; }
 .msg-row.highlight .bubble { outline: 2px solid #eaa300; transition: outline 0.3s; }
-.msg-actions { position: absolute; top: -14px; right: 4px; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
-.msg-row:hover .msg-actions { display: flex; }
+.msg-actions { position: absolute; bottom: calc(100% - 9px); left: 0; display: none; align-items: center; gap: 2px; white-space: nowrap; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1px; z-index: 1; }
+.msg-row.mine .msg-actions { right: 0; left: auto; }
+.msg-row:hover .msg-actions, .msg-row:focus-within .msg-actions { display: flex; }
 /* 팝오버가 액션 바의 자식이라, 열려 있는 동안은 hover가 풀려도 바가 남아야 한다 */
 .msg-actions:has(.reaction-palette), .msg-actions:has(.msg-menu) { display: flex; z-index: 2; } /* 아래 메시지의 액션 바(z-index 1)에 가려지지 않게 */
 .msg-actions button { border: none; background: none; padding: 3px 6px; font-size: 12px; }
+.fluent-emoji { display: inline-block; width: 20px; height: 20px; object-fit: contain; vertical-align: middle; user-select: none; }
 .msg-actions button:hover { background: #f0f0f0; }
 .msg-actions-divider { width: 1px; height: 16px; background: #d1d1d1; margin: 0 2px; flex: none; }
-.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
-.reaction-palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 6px; width: 200px; }
-.reaction-palette button { padding: 4px; font-size: 15px; border-radius: 4px; }
+.msg-actions .reaction-palette, .msg-actions .msg-menu { position: absolute; right: 0; bottom: 100%; margin-bottom: 4px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 20; }
+.msg-actions.open-below .reaction-palette, .msg-actions.open-below .msg-menu { bottom: auto; top: 100%; margin-bottom: 0; margin-top: 4px; }
+.reaction-palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 8px; width: min(320px, calc(100vw - 32px)); }
+.reaction-palette button { display: grid; place-items: center; min-width: 0; height: 36px; padding: 4px; border-radius: 4px; }
+.reaction-palette .fluent-emoji { width: 28px; height: 28px; }
 .msg-menu { display: flex; flex-direction: column; min-width: 140px; padding: 4px; }
 .msg-menu button { text-align: left; padding: 7px 10px; border-radius: 4px; white-space: nowrap; }
 .msg-menu button.btn-danger { color: #c4314b; }
 .msg-menu button.btn-danger:hover { background: #fcf0f2; }
 .reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-.reaction-chip { border: 1px solid #d1d1d1; background: #fff; border-radius: 12px; padding: 1px 8px; font-size: 12px; }
+.reaction-chip { display: inline-flex; align-items: center; gap: 3px; border: 1px solid #d1d1d1; background: #fff; border-radius: 12px; padding: 1px 8px; font-size: 12px; }
+.reaction-chip .fluent-emoji { width: 18px; height: 18px; }
 .reaction-chip.mine { background: #e8ebfa; border-color: #5b5fc7; }
+.activity-reaction .fluent-emoji { width: 18px; height: 18px; }
 .attachment { display: inline-flex; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 10px; border: 1px solid #d1d1d1; border-radius: 6px; background: #fff; }
 .attachment .size { color: #888; font-size: 12px; }
 .attachment-image { display: block; margin-top: 6px; }
@@ -168,14 +179,7 @@ a { color: #5b5fc7; text-decoration: none; }
 .diagnostics-panel { position: fixed; top: 12px; right: 12px; z-index: 1000; max-width: min(380px, calc(100vw - 24px)); padding: 12px; background: #fff; color: #222; border: 1px solid #777; border-radius: 8px; box-shadow: 0 3px 14px #0003; font-size: 13px; }
 .diagnostics-panel button { margin: 4px; }
 .diagnostics-panel code { overflow-wrap: anywhere; }
-.agent-badge{font-size:10px;border:1px solid #7676b9;border-radius:4px;padding:1px 4px;color:#5858a8}.agent-settings{max-height:85vh;overflow:auto}.agent-settings p{line-height:1.6;font-size:13px}.agent-settings label{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-.agent-settings { width: min(520px, calc(100vw - 32px)); overflow-wrap: anywhere; }
-.agent-settings input:not([type="radio"]), .agent-settings select { min-width: 0; max-width: 100%; padding: 6px; }
-.agent-settings fieldset { border: 1px solid #d1d1d1; border-radius: 4px; }
-.agent-list { list-style: none; padding: 0; margin: 0; }
-.agent-row { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 0; border-bottom: 1px solid #e5e5e5; }
-.agent-row > span { font-size: 13px; color: #666; }
-.agent-connection-setup { padding: 12px; border: 1px solid #d1d1d1; border-radius: 4px; }
+.agent-badge{font-size:10px;border:1px solid #7676b9;border-radius:4px;padding:1px 4px;color:#5858a8}
 
 @media (max-width: 680px) {
   .shell { height: 100dvh; flex-direction: column; }
@@ -192,9 +196,7 @@ a { color: #5b5fc7; text-decoration: none; }
   .chat-tabs { margin: 0; }
   .chat-tab, .icon-btn { min-height: 40px; }
   .mobile-chat-back { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 44px; font-size: 30px; }
-  .agent-invite-controls { padding: 8px 12px; }
-  .agent-invite-actions button { min-height: 44px; }
-  .agent-participants { max-height: 54px; overflow-y: auto; }
   .dialog { max-width: calc(100vw - 24px); max-height: 85dvh; overflow-y: auto; }
   .dialog input, .dialog textarea, .composer textarea { font-size: 16px; }
+  .convo-more { opacity: 1; }
 }

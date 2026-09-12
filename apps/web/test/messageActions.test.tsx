@@ -30,7 +30,9 @@ function renderBubble(m: MessageDto, fn: ReturnType<typeof jsonStub>, isMine = t
   }
   render(
     <QueryClientProvider client={qc}>
-      <MessageBubble m={m} isMine={isMine} meId={meId} memberNames={[]} onReply={() => {}} />
+      <div className="timeline">
+        <MessageBubble m={m} isMine={isMine} meId={meId} memberNames={[]} onReply={() => {}} />
+      </div>
     </QueryClientProvider>,
   )
   return qc
@@ -51,7 +53,9 @@ describe('MessageBubble 액션', () => {
   it('빠른 반응을 누르면 PUT으로 추가한다', async () => {
     const fn = jsonStub(msg({ reactions: [{ emoji: '👍', userIds: [meId] }] }))
     renderBubble(msg({}), fn)
-    await userEvent.click(screen.getByRole('button', { name: '👍' }))
+    const quickReaction = screen.getByRole('button', { name: '👍' })
+    expect(quickReaction.querySelector('img')?.getAttribute('src')).toBe('/fluent-emoji/thumbs-up.png')
+    await userEvent.click(quickReaction)
     await waitFor(() => expect(fn).toHaveBeenCalled())
     const [path, init] = lastCall(fn)
     expect(path).toBe('/api/messages/m1/reactions')
@@ -221,7 +225,9 @@ describe('MessageBubble 액션', () => {
     const fn = jsonStub(msg({ reactions: [{ emoji: '🎉', userIds: [meId] }] }))
     renderBubble(msg({}), fn)
     await userEvent.click(screen.getByRole('button', { name: '반응 추가' }))
-    await userEvent.click(screen.getByRole('button', { name: '🎉' }))
+    const partyPopper = screen.getByRole('button', { name: '🎉' })
+    expect(partyPopper.querySelector('img')?.getAttribute('src')).toBe('/fluent-emoji/party-popper.png')
+    await userEvent.click(partyPopper)
     await waitFor(() => expect(fn).toHaveBeenCalled())
     const [path, init] = lastCall(fn)
     expect(path).toBe('/api/messages/m1/reactions')
@@ -271,9 +277,55 @@ describe('MessageBubble 액션', () => {
     expect(bar?.querySelectorAll(':scope > button')).toHaveLength(7)
   })
 
+  it('액션 바는 본문 밖 말풍선 경계에 배치된다', () => {
+    renderBubble(msg({ body: '가리지 않아야 할 본문' }), jsonStub(msg({})), true)
+    const bar = document.querySelector('.msg-actions')
+    expect(bar?.parentElement?.classList.contains('msg-bubble-wrap')).toBe(true)
+    expect(bar?.nextElementSibling?.classList.contains('bubble')).toBe(true)
+    expect(bar?.closest('.bubble')).toBeNull()
+  })
+
   it('남의 메시지 액션 바는 수정 버튼 없이 6개 버튼을 담는다', () => {
     renderBubble(msg({}), jsonStub(msg({})), false)
     const bar = document.querySelector('.msg-actions')
     expect(bar?.querySelectorAll(':scope > button')).toHaveLength(6)
+  })
+})
+
+describe('팝오버 열림 방향', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  // 타임라인 상단(40px)·액션 바 위치·팝오버 높이를 흉내 낸다 — jsdom에는 레이아웃이 없다
+  function stubLayout({ barTop, popoverHeight }: { barTop: number; popoverHeight: number }) {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const top = this.classList.contains('timeline') ? 40 : this.classList.contains('msg-actions') ? barTop : 0
+      return { top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) } as DOMRect
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('msg-menu') || this.classList.contains('reaction-palette') ? popoverHeight : 0
+    })
+  }
+
+  const bar = () => document.querySelector('.msg-actions')
+
+  it('타임라인 맨 위 메시지의 더보기 메뉴는 아래로 연다', async () => {
+    stubLayout({ barTop: 48, popoverHeight: 120 }) // 위쪽 공간 8px < 메뉴 120px
+    renderBubble(msg({}), jsonStub(msg({})))
+    await openMenu()
+    expect(bar()?.classList.contains('open-below')).toBe(true)
+  })
+
+  it('타임라인 맨 위 메시지의 반응 팔레트는 아래로 연다', async () => {
+    stubLayout({ barTop: 48, popoverHeight: 200 })
+    renderBubble(msg({}), jsonStub(msg({})))
+    await userEvent.click(screen.getByRole('button', { name: '반응 추가' }))
+    expect(bar()?.classList.contains('open-below')).toBe(true)
+  })
+
+  it('위쪽 공간이 충분하면 메뉴를 위로 연다', async () => {
+    stubLayout({ barTop: 400, popoverHeight: 120 }) // 위쪽 공간 360px
+    renderBubble(msg({}), jsonStub(msg({})))
+    await openMenu()
+    expect(bar()?.classList.contains('open-below')).toBe(false)
   })
 })
