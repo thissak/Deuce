@@ -20,6 +20,10 @@ function setHidden(hidden: boolean) {
   Object.defineProperty(document, 'hidden', { value: hidden, configurable: true })
 }
 
+function setFocused(focused: boolean) {
+  vi.spyOn(document, 'hasFocus').mockReturnValue(focused)
+}
+
 describe('maybeNotify', () => {
   let qc: QueryClient
   beforeEach(() => {
@@ -31,6 +35,7 @@ describe('maybeNotify', () => {
   })
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     setHidden(false)
   })
 
@@ -45,10 +50,18 @@ describe('maybeNotify', () => {
     expect(FakeNotification.instances).toHaveLength(0)
   })
 
-  it('탭이 보이면 무시', () => {
+  it('창이 보이고 포커스가 있으면 무시', () => {
     setHidden(false)
+    setFocused(true)
     maybeNotify(qc, 'me1', msg({}), () => {})
     expect(FakeNotification.instances).toHaveLength(0)
+  })
+
+  it('창이 보여도 포커스를 잃었으면 알림을 만든다', () => {
+    setHidden(false)
+    setFocused(false)
+    maybeNotify(qc, 'me1', msg({ body: '뒤에 가려진 창' }), () => {})
+    expect(FakeNotification.instances).toHaveLength(1)
   })
 
   it('음소거된 방은 무시', () => {
