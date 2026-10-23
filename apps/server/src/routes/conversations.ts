@@ -4,6 +4,7 @@ import { RT } from '@deuce/shared'
 import { prisma } from '../db.js'
 import { isMember, summarizeConversation } from '../domain/conversations.js'
 import { messageInclude, toMessageDto } from '../serializers.js'
+import { retireRoomAgents } from '../domain/agents.js'
 
 const CreateSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('dm'), otherUserId: z.string() }),
@@ -130,8 +131,9 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     if (!(await isMember(id, me))) return reply.code(403).send({ error: 'not a member' })
     const convo = await prisma.conversation.findUniqueOrThrow({ where: { id } })
     if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
-    await prisma.conversationMember.delete({
-      where: { conversationId_userId: { conversationId: id, userId: me } },
+    await prisma.$transaction(async (tx) => {
+      await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId: id, userId: me } } })
+      await retireRoomAgents(tx, id, me)
     })
     app.io.to(`user:${me}`).emit(RT.conversationRemoved, { conversationId: id })
     app.io.in(`user:${me}`).socketsLeave(`convo:${id}`)
@@ -147,8 +149,9 @@ export const conversationRoutes: FastifyPluginAsync = async (app) => {
     if (convo.type === 'DM') return reply.code(400).send({ error: 'group only' })
     if (!(await isMember(id, userId))) return reply.code(404).send({ error: 'member not found' })
     // ReadState는 남긴다 — 재가입 시 부재 기간 메시지를 안 읽음으로 보이게 하는 의도된 정책
-    await prisma.conversationMember.delete({
-      where: { conversationId_userId: { conversationId: id, userId } },
+    await prisma.$transaction(async (tx) => {
+      await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId: id, userId } } })
+      await retireRoomAgents(tx, id, userId)
     })
     app.io.to(`user:${userId}`).emit(RT.conversationRemoved, { conversationId: id })
     app.io.in(`user:${userId}`).socketsLeave(`convo:${id}`)

@@ -12,6 +12,9 @@ import { searchRoutes } from './routes/search.js'
 import { activityRoutes } from './routes/activity.js'
 import { presenceRoutes } from './routes/presence.js'
 import { attachmentRoutes } from './routes/attachments.js'
+import { agentAccessRoutes } from './routes/agents.js'
+import { agentManagementRoutes } from './routes/agent-management.js'
+import { mcpRoutes } from './routes/mcp.js'
 import { LocalDiskStorage } from './storage.js'
 import { setupRealtime } from './realtime/io.js'
 import { randomUUID } from 'node:crypto'
@@ -80,6 +83,10 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     prefix: '/api',
     storage: new LocalDiskStorage(config.uploadDir),
   })
+
+  await app.register(agentManagementRoutes, { prefix: '/api' })
+  await app.register(agentAccessRoutes, { prefix: '/api/agent', config })
+  await app.register(mcpRoutes, { config })
 
   setupRealtime(app, config)
   await app.register(presenceRoutes, { prefix: '/api' })

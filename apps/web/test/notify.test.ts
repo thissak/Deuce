@@ -10,7 +10,7 @@ class FakeNotification {
   onclick: (() => void) | null = null
   constructor(
     readonly title: string,
-    readonly options?: { body?: string },
+    readonly options?: { body?: string; tag?: string },
   ) {
     FakeNotification.instances.push(this)
   }
@@ -18,6 +18,10 @@ class FakeNotification {
 
 function setHidden(hidden: boolean) {
   Object.defineProperty(document, 'hidden', { value: hidden, configurable: true })
+}
+
+function setFocused(focused: boolean) {
+  vi.spyOn(document, 'hasFocus').mockReturnValue(focused)
 }
 
 describe('maybeNotify', () => {
@@ -31,6 +35,7 @@ describe('maybeNotify', () => {
   })
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     setHidden(false)
   })
 
@@ -38,6 +43,8 @@ describe('maybeNotify', () => {
     maybeNotify(qc, 'me1', msg({ body: '안녕하세요' }), () => {})
     expect(FakeNotification.instances).toHaveLength(1)
     expect(FakeNotification.instances[0]?.title).toBe('A')
+    // 여러 창이 같은 메시지를 알려도 OS가 하나로 합치도록 메시지 ID를 tag로 쓴다.
+    expect(FakeNotification.instances[0]?.options?.tag).toBe(msg({}).id)
   })
 
   it('내 메시지는 무시', () => {
@@ -45,10 +52,18 @@ describe('maybeNotify', () => {
     expect(FakeNotification.instances).toHaveLength(0)
   })
 
-  it('탭이 보이면 무시', () => {
+  it('창이 보이고 포커스가 있으면 무시', () => {
     setHidden(false)
+    setFocused(true)
     maybeNotify(qc, 'me1', msg({}), () => {})
     expect(FakeNotification.instances).toHaveLength(0)
+  })
+
+  it('창이 보여도 포커스를 잃었으면 알림을 만든다', () => {
+    setHidden(false)
+    setFocused(false)
+    maybeNotify(qc, 'me1', msg({ body: '뒤에 가려진 창' }), () => {})
+    expect(FakeNotification.instances).toHaveLength(1)
   })
 
   it('음소거된 방은 무시', () => {

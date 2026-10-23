@@ -9,6 +9,7 @@ import { Composer } from './Composer'
 import { ErrorNotice } from './ErrorNotice'
 import { GroupSettings } from './GroupSettings'
 import { PresenceDot } from './PresenceDot'
+import { RoomAgents } from './RoomAgents'
 import { SharedTab } from './SharedTab'
 import { Timeline } from './Timeline'
 
@@ -18,6 +19,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
   const [tab, setTab] = useState<'chat' | 'shared'>('chat')
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAgents, setShowAgents] = useState(false)
   const [params, setParams] = useSearchParams()
   const jumpToId = params.get('m')
 
@@ -79,6 +81,9 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
             {c.mutedAt ? '🔕' : '🔔'}
           </button>
           {c.type !== 'DM' && (
+            <button className="icon-btn" title="AI 세션 연결" aria-label="AI 세션 연결" onClick={() => setShowAgents(true)}>🤖</button>
+          )}
+          {c.type !== 'DM' && (
             <button className="icon-btn" title="그룹 설정" onClick={() => setShowSettings(true)}>⚙️</button>
           )}
         </div>
@@ -111,6 +116,7 @@ export function ChatView({ me, conversationId }: { me: UserDto; conversationId: 
         <SharedTab conversationId={conversationId} />
       )}
       {showSettings && <GroupSettings me={me} detail={c} onClose={() => setShowSettings(false)} />}
+      {showAgents && <RoomAgents conversationId={conversationId} onClose={() => setShowAgents(false)} />}
     </section>
   )
 }
