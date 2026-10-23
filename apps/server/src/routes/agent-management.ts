@@ -48,6 +48,9 @@ export const agentManagementRoutes: FastifyPluginAsync = async (app) => {
     const token = `deuce_${randomBytes(32).toString('base64url')}`
     const userId = randomUUID()
     const a = await prisma.$transaction(async (tx) => {
+      // 소유자 멤버십 행을 잠가 퇴장·제거(retireRoomAgents)와 직렬화한다. 그사이 나갔으면 발급하지 않는다.
+      const owner = await tx.$queryRaw<unknown[]>`SELECT 1 FROM "ConversationMember" WHERE "conversationId" = ${id} AND "userId" = ${req.currentUser.id} FOR UPDATE`
+      if (owner.length === 0) throw Object.assign(new Error('conversation member required'), { statusCode: 403 })
       await tx.user.create({ data: { id: userId, email: `${userId}@agents.deuce.invalid`, name: p.data.name, isAgent: true } })
       await tx.conversationMember.create({ data: { conversationId: id, userId } })
       return tx.agentConnection.create({ data: { conversationId: id, scope: 'SELECTED', ownerId: req.currentUser.id, userId,

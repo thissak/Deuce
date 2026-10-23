@@ -22,7 +22,11 @@ export function RoomAgents({ conversationId, onClose }: { conversationId: string
   })
   const revoke = useMutation({
     mutationFn: (id: string) => api(`${base}/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onSuccess: (_, id) => {
+      // 방금 발급한 키를 해제했으면 회수된 키의 설정 복사를 더 보여주지 않는다.
+      setIssued((current) => (current?.id === id ? null : current))
+      return qc.invalidateQueries({ queryKey: key })
+    },
   })
 
   return (
