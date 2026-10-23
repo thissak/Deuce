@@ -151,3 +151,39 @@ it('원격 MCP는 쿠키·쿼리 키·외부 Origin을 거부하고 상태 없�
     expect((await call({ authorization })).statusCode).toBe(401)
   } finally { await app.close() }
 })
+
+it('소유자가 방을 나가거나 AI 멤버가 제거되면 키를 회수하고, 다시 들어와도 되살리지 않는다', async () => {
+  const { app, owner, peer, room, connect } = await setup()
+  try {
+    const c = await room('channel', '회수 확인')
+    const ownerId = (await app.inject({ url: '/auth/me', headers: { cookie: owner } })).json().id as string
+    const first = (await connect(c.id)).json()
+    expect((await app.inject({ method: 'DELETE', url: `/api/conversations/${c.id}/members/${ownerId}`, headers: { cookie: peer } })).statusCode).toBe(200)
+    expect((await testDb.agentConnection.findUniqueOrThrow({ where: { id: first.id } })).revokedAt).not.toBeNull()
+    await app.inject({ method: 'POST', url: `/api/conversations/${c.id}/members`, headers: { cookie: peer }, payload: { userIds: [ownerId] } })
+    expect((await app.inject({ url: '/api/agent/conversation', headers: { authorization: `Bearer ${first.token}` } })).statusCode).toBe(401)
+    expect((await app.inject({ url: `/api/conversations/${c.id}/agents`, headers: { cookie: owner } })).json()).toEqual([])
+
+    const second = (await connect(c.id)).json()
+    const agentUserId = (await testDb.agentConnection.findUniqueOrThrow({ where: { id: second.id } })).userId
+    expect((await app.inject({ method: 'DELETE', url: `/api/conversations/${c.id}/members/${agentUserId}`, headers: { cookie: peer } })).statusCode).toBe(200)
+    expect((await app.inject({ url: '/api/agent/conversation', headers: { authorization: `Bearer ${second.token}` } })).statusCode).toBe(401)
+    expect((await app.inject({ url: `/api/conversations/${c.id}/agents`, headers: { cookie: owner } })).json()).toEqual([])
+
+    const third = (await connect(c.id)).json()
+    expect((await app.inject({ method: 'DELETE', url: `/api/conversations/${c.id}/members/me`, headers: { cookie: owner } })).statusCode).toBe(204)
+    expect((await testDb.agentConnection.findUniqueOrThrow({ where: { id: third.id } })).revokedAt).not.toBeNull()
+  } finally { await app.close() }
+})
+
+it('동시에 두 번 해제해도 한 번만 처리하고 공지도 한 번만 남긴다', async () => {
+  const { app, owner, room, connect } = await setup()
+  try {
+    const c = await room('channel', '중복 해제')
+    const key = (await connect(c.id)).json()
+    const url = `/api/conversations/${c.id}/agents/${key.id}`
+    const results = await Promise.all([1, 2].map(() => app.inject({ method: 'DELETE', url, headers: { cookie: owner } })))
+    expect(results.map((r) => r.statusCode).sort()).toEqual([204, 404])
+    expect(await testDb.message.count({ where: { conversationId: c.id, system: true, body: { contains: '해제' } } })).toBe(1)
+  } finally { await app.close() }
+})

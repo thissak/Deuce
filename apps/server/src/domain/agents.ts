@@ -21,6 +21,17 @@ export function agentConversationWhere(a: AgentConnection & { conversationId: st
   }
 }
 
+/** 사람이 방을 떠나거나 AI 멤버가 제거되면 그 방의 관련 키를 회수한다. 다시 들어와도 조용히 되살아나지 않는다. */
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+export async function retireRoomAgents(tx: Tx, conversationId: string, userId: string) {
+  const agents = await tx.agentConnection.findMany({ where: { conversationId, revokedAt: null, OR: [{ ownerId: userId }, { userId }] },
+    select: { id: true, userId: true } })
+  if (agents.length === 0) return
+  await tx.agentConnection.updateMany({ where: { id: { in: agents.map((a) => a.id) } }, data: { revokedAt: new Date() } })
+  await tx.conversationMember.deleteMany({ where: { conversationId, userId: { in: agents.map((a) => a.userId) } } })
+}
+
 export async function authenticateAgent(authorization: string | undefined, config: AppConfig) {
   const token = authorization?.match(/^Bearer (deuce_[A-Za-z0-9_-]{43})$/)?.[1]
   if (!token) return null

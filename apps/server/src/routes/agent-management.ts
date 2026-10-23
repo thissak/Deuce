@@ -27,7 +27,9 @@ export const agentManagementRoutes: FastifyPluginAsync = async (app) => {
   app.get('/conversations/:id/agents', async (req, reply) => {
     const { id } = req.params as { id: string }
     const agents = await prisma.agentConnection.findMany({
-      where: { conversationId: id, revokedAt: null, expiresAt: { gt: new Date() } }, include, orderBy: { createdAt: 'asc' },
+      where: { conversationId: id, revokedAt: null, expiresAt: { gt: new Date() },
+        owner: { memberships: { some: { conversationId: id } } }, user: { memberships: { some: { conversationId: id } } } },
+      include, orderBy: { createdAt: 'asc' },
     })
     const items: RoomAgent[] = agents.map((a) => ({
       id: a.id, name: a.user.name, ownerName: a.owner.name, editable: a.ownerId === req.currentUser.id,
@@ -59,10 +61,13 @@ export const agentManagementRoutes: FastifyPluginAsync = async (app) => {
     const { id, agentId } = req.params as { id: string; agentId: string }
     const a = await prisma.agentConnection.findUnique({ where: { id: agentId }, include })
     if (!a || a.conversationId !== id || a.ownerId !== req.currentUser.id || a.revokedAt) return reply.code(404).send({ error: 'agent not found' })
-    await prisma.$transaction([
-      prisma.agentConnection.update({ where: { id: a.id }, data: { revokedAt: new Date() } }),
-      prisma.conversationMember.deleteMany({ where: { conversationId: id, userId: a.userId } }),
-    ])
+    // 동시 해제 요청은 한 번만 처리해 공지가 중복되지 않게 한다.
+    const revoked = await prisma.$transaction(async (tx) => {
+      const { count } = await tx.agentConnection.updateMany({ where: { id: a.id, revokedAt: null }, data: { revokedAt: new Date() } })
+      if (count === 1) await tx.conversationMember.deleteMany({ where: { conversationId: id, userId: a.userId } })
+      return count === 1
+    })
+    if (!revoked) return reply.code(404).send({ error: 'agent not found' })
     await announce(id, req.currentUser.id, `${req.currentUser.name}님이 AI 세션 ‘${a.user.name}’의 연결을 해제했습니다.`)
     return reply.code(204).send()
   })

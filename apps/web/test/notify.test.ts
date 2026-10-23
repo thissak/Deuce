@@ -10,7 +10,7 @@ class FakeNotification {
   onclick: (() => void) | null = null
   constructor(
     readonly title: string,
-    readonly options?: { body?: string },
+    readonly options?: { body?: string; tag?: string },
   ) {
     FakeNotification.instances.push(this)
   }
@@ -43,6 +43,8 @@ describe('maybeNotify', () => {
     maybeNotify(qc, 'me1', msg({ body: '안녕하세요' }), () => {})
     expect(FakeNotification.instances).toHaveLength(1)
     expect(FakeNotification.instances[0]?.title).toBe('A')
+    // 여러 창이 같은 메시지를 알려도 OS가 하나로 합치도록 메시지 ID를 tag로 쓴다.
+    expect(FakeNotification.instances[0]?.options?.tag).toBe(msg({}).id)
   })
 
   it('내 메시지는 무시', () => {

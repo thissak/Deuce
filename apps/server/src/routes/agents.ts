@@ -13,7 +13,8 @@ type Agent = NonNullable<Awaited<ReturnType<typeof authenticateAgent>>>
 /** AI 세션용 API. 쿠키 세션과 섞지 않고 요청마다 키·방 권한을 DB에서 다시 확인한다. */
 export const agentAccessRoutes: FastifyPluginAsync<{ config: AppConfig }> = async (app, opts) => {
   const identities = new WeakMap<object, Agent>()
-  app.addHook('preHandler', async (req, reply) => {
+  // 본문을 읽기 전에 키부터 확인한다.
+  app.addHook('onRequest', async (req, reply) => {
     const a = await authenticateAgent(req.headers.authorization, opts.config)
     if (!a) return reply.code(401).send({ error: 'invalid agent credential' })
     identities.set(req, a)

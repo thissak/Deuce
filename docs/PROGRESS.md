@@ -9,7 +9,7 @@ lifecycle: active
 - [x] 방 메뉴의 AI 세션 연결: 방 전용 키 발급·해제, 연결/해제 공지, 키 원문 비표시 복사([ADR 014](adr/014-room-ai-session-mcp.md))
 - [x] 원격 MCP `/mcp`의 `get_conversation`·`read_messages`(`after`)·`post_message`, 요청마다 키·방 권한 재검사
 - [x] 창이 보여도 포커스를 잃으면 새 메시지 알림 표시(데스크톱 창이 가려진 경우)
-- [x] 웹 165·서버 84·데스크톱 10개(총 259개), 전체 타입 검사·빌드, 실제 Claude Code `claude mcp add`→연결→게시·읽기 로컬 확인
+- [x] 웹 166·서버 86·데스크톱 10개(총 262개), 전체 타입 검사·빌드, 실제 Claude Code `claude mcp add`→연결→게시·읽기 로컬 확인
 - [ ] PR 리뷰·머지, 운영 웹·서버 배포와 데스크톱 릴리스 범위 결정
 - [ ] 운영에서 감독 방에 Lexus Claude 연결·실제 Windows 알림 확인
 

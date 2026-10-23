@@ -74,7 +74,8 @@ function AgentSetup({ agentKey }: { agentKey: AgentKey }) {
         'Claude Code 등록 명령')}>Claude Code 등록 명령 복사</button>
       <button className="btn-plain" onClick={() => void copy(
         `[mcp_servers.deuce]\nurl = ${JSON.stringify(mcpUrl)}\nhttp_headers = { Authorization = ${JSON.stringify(authorization)} }\n`,
-        'Codex 설정')}>Codex 설정 복사 (~/.codex/config.toml)</button>
+        'Codex 설정')}>Codex 설정 복사</button>
+      <p>Claude Code 명령은 실행한 프로젝트 폴더에만 등록됩니다. Codex 설정은 <code>~/.codex/config.toml</code>에 추가하며 이 PC의 모든 Codex 세션에 적용됩니다.</p>
       <p>적용한 뒤 그 세션에서 “듀스 방에 작업 결과 보내줘”처럼 요청하세요. 명령과 설정에는 비밀 키가 들어 있으니 채팅에 붙여 넣지 마세요.</p>
       {copied && <p role="status">{copied}을 복사했습니다.</p>}
       {failed && <p role="alert">복사하지 못했습니다. 클립보드 권한을 확인하고 다시 눌러 주세요.</p>}
