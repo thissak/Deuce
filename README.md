@@ -11,7 +11,8 @@ Teams·Slack에서 참고한 채팅 경험을 제공합니다. AI 참여 기능�
 - 웹 앱, Mac·Windows 앱, 버전 확인과 사용자 선택에 따른 다운로드·설치
 - 서버와 브라우저를 연결해 보는 선택적 진단 로그
 
-AI 초대·PC 실행기·MCP는 #18로 제거했고 웹 `20260911-02`·데스크톱 `0.2.4`에 배포했습니다.
+사용 중인 Claude Code·Codex 세션을 방에 연결해 작업 보고와 질문을 주고받을 수 있습니다([AI 세션 연결](docs/ai-connections.md)).
+예전 AI 초대·PC 실행기는 #18로 제거했습니다.
 요청 없는 AI 자동 감시, 자료 OCR/색인, 서버 간 연합, 영상통화는 아직 없습니다.
 Mac arm64의 실제 업데이트는 확인했고 Windows·Intel Mac 업데이트 실기 검증은 남아 있습니다.
 
@@ -21,7 +22,7 @@ Mac arm64의 실제 업데이트는 확인했고 Windows·Intel Mac 업데이트
 |---|---|
 | 실행하고 기여하기 | [로컬 개발](docs/getting-started.md) · [기여 안내](CONTRIBUTING.md) |
 | 내 서버 운영하기 | [서버 설치와 앱 제작](docs/self-hosting.md) |
-| AI 재설계 검토 | [새 계획](docs/design/2026-09-11-ai-restart-plan.md) · [기존 기능 상태](docs/ai-connections.md) |
+| AI 세션 연결 | [사용법](docs/ai-connections.md) · [재설계 계획](docs/design/2026-09-11-ai-restart-plan.md) |
 | 완료/미완료 확인 | [진행 상태](docs/PROGRESS.md) · [변경 이력](docs/CHANGELOG.md) |
 | 문제·아이디어 제안 | [GitHub Issues](https://github.com/thissak/Deuce/issues) |
 | 보안 제보 | [보안 안내](SECURITY.md) |

@@ -56,6 +56,7 @@ it('retires credentials and unfinished work while preserving conversations, gran
     expect(await testDb.agentRun.count()).toBe(2)
     const activity = (await app.inject({ url: '/api/activity', headers: { cookie: peerCookie } })).json()
     expect(JSON.stringify(activity)).toContain('확인 부탁드립니다')
-    expect((await app.inject({ method: 'POST', url: '/api/agent/messages', headers: { authorization: 'Bearer old-key' }, payload: { body: '차단' } })).statusCode).toBe(404)
+    // ADR 014로 방 단위 경로는 다시 있지만, 회수된 예전 키는 인증에서 거부된다.
+    expect((await app.inject({ method: 'POST', url: '/api/agent/messages', headers: { authorization: 'Bearer old-key' }, payload: { body: '차단' } })).statusCode).toBe(401)
   } finally { await app.close() }
 })

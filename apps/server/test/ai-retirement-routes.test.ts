@@ -2,16 +2,18 @@ import { expect, it } from 'vitest'
 import { io } from 'socket.io-client'
 import { buildApp } from '../src/app.js'
 
-it('retired AI and MCP endpoints are unavailable even with a legacy bearer header', async () => {
+it('retired personal AI endpoints stay unavailable and legacy keys cannot use the room AI paths', async () => {
   const app = await buildApp()
   try {
-    for (const url of ['/api/agents', '/api/agent/conversations', '/api/agent/messages', '/api/conversations/room/agents', '/mcp']) {
-      const response = await app.inject({ url, headers: { authorization: 'Bearer legacy-key' } })
-      expect(response.statusCode, url).toBe(404)
-    }
-    for (const url of ['/api/agents', '/api/agent/messages', '/api/conversations/room/agents/bot/requests', '/mcp']) {
+    // #18의 개인 AI·초대·요청 API는 되살리지 않았다(ADR 014는 방 단위 연결만 제공).
+    for (const url of ['/api/agents', '/api/conversations/room/agents/bot/requests']) {
       const response = await app.inject({ method: 'POST', url, payload: {}, headers: { authorization: 'Bearer legacy-key' } })
       expect(response.statusCode, url).toBe(404)
+    }
+    expect((await app.inject({ url: '/api/agents', headers: { authorization: 'Bearer legacy-key' } })).statusCode).toBe(404)
+    for (const [method, url] of [['GET', '/api/agent/conversation'], ['POST', '/api/agent/messages'], ['POST', '/mcp']] as const) {
+      const response = await app.inject({ method, url, ...(method === 'POST' ? { payload: {} } : {}), headers: { authorization: 'Bearer legacy-key' } })
+      expect(response.statusCode, url).toBe(401)
     }
     expect((await app.inject({ url: '/health' })).statusCode).toBe(200)
   } finally { await app.close() }

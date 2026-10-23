@@ -180,6 +180,8 @@ a { color: #5b5fc7; text-decoration: none; }
 .diagnostics-panel button { margin: 4px; }
 .diagnostics-panel code { overflow-wrap: anywhere; }
 .agent-badge{font-size:10px;border:1px solid #7676b9;border-radius:4px;padding:1px 4px;color:#5858a8}
+.agent-setup { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #f7f4fc; border-radius: 8px; }
+.room-agents p { margin: 0; }
 
 @media (max-width: 680px) {
   .shell { height: 100dvh; flex-direction: column; }
